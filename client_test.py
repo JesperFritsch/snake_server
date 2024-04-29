@@ -6,29 +6,30 @@ from multiprocessing import Pipe, Process
 from snake_sim.render.pygame_render import play_stream
 
 async def snake_stream():
-    uri = "ws://localhost:42069/ws"
+    uri = "ws://DESKTOP-9PJQ0A4:42069/ws"
     websocket = None
     parent_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
     try:
         websocket = await websockets.connect(uri)
-        await websocket.send('{"grid_width": 32, "grid_height": 32, "food_count": 15, "nr_of_snakes": 7}')
+        await websocket.send('{"grid_width": 10, "grid_height": 10, "food_count": 15, "nr_of_snakes": 7}')
         ack = await websocket.recv()
         print(ack)
         while render_p.is_alive():
             data = await websocket.recv()
             data_dict = json.loads(data)
-            data_dict = json.loads(data_dict)
             parent_conn.send(data_dict)
     except websockets.exceptions.ConnectionClosed as e:
-        print(f"Connection closed with error: {e}")
+        print(f"Connection closed: {e}")
     except Exception as e:
         print(f"Error: {e}")
     finally:
         if websocket is not None:
             await websocket.close()
             print("WebSocket closed.")
+    while render_p.is_alive():
+        pass
 
 async def main():
     await snake_stream()

@@ -30,6 +30,7 @@ def start_stream_run(conn, config):
     grid_width = config.get('grid_width', 32)
     food_count = config.get('food_count', 15)
     env = SnakeEnv(grid_width, grid_height, food_count)
+    env.store_runs = False
     count = 0
     for snake_config in snake_defalut_config['snake_configs']:
         count += 1
@@ -37,6 +38,8 @@ def start_stream_run(conn, config):
         if count == nr_of_snakes:
             break
     env.stream_run(conn,)
+    conn.close()
+    print('Stream run finished')
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -59,21 +62,20 @@ async def websocket_endpoint(websocket: WebSocket):
         env_p.start()
         if data_mode == 'pixel_data':
             init_data = await nonblock_exec(parent_conn.recv)
-            print(init_data)
             frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2)
         print('Sending data with mode: ', data_mode)
         while env_p.is_alive():
             # Depending on the config, decide what data to send
-            try:
-                step_data = await nonblock_exec(parent_conn.recv)
-            except EOFError:
-                break
-            step_dict = json.dumps(step_data)
-            if data_mode == 'steps':
-                payload = step_dict
-            elif data_mode == 'pixel_data':
-                payload = frame_builder.step_to_pixel_changes(step_dict)
-            await websocket.send_json(payload)
+            if parent_conn.poll(timeout=0.1):
+                try:
+                    step_data = await nonblock_exec(parent_conn.recv)
+                except EOFError:
+                    break
+                if data_mode == 'steps':
+                    payload = step_data
+                elif data_mode == 'pixel_data':
+                    payload = frame_builder.step_to_pixel_changes(step_data)
+                await websocket.send_json(payload)
     except WebSocketDisconnect as e:
         print(f"Connection closed with error: {e}")
 
@@ -81,6 +83,7 @@ async def websocket_endpoint(websocket: WebSocket):
         print(e)
 
     finally:
+        print('Closing connection')
         nr_of_streams -= 1
         env_p.terminate()
         await websocket.close()
