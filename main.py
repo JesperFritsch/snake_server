@@ -24,7 +24,7 @@ async def nonblock_exec(func, *args):
     return await asyncio.to_thread(func, *args)
 
 def start_stream_run(conn, config):
-    # sys.stdout = open(os.devnull, 'w')
+    sys.stdout = open(os.devnull, 'w')
     nr_of_snakes = config.get('nr_of_snakes', 7)
     grid_height = config.get('grid_height', 32)
     grid_width = config.get('grid_width', 32)
