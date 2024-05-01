@@ -13,7 +13,7 @@ async def snake_stream():
     render_p.start()
     try:
         websocket = await websockets.connect(uri)
-        await websocket.send('{"grid_width": 10, "grid_height": 10, "food_count": 15, "nr_of_snakes": 7}')
+        await websocket.send('{"grid_width": 32, "grid_height": 32, "food_count": 15, "nr_of_snakes": 15}')
         ack = await websocket.recv()
         print(ack)
         while render_p.is_alive():

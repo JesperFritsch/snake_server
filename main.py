@@ -2,6 +2,8 @@ import json
 import sys
 import os
 import asyncio
+import logging
+from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from multiprocessing import Pipe, Process, Queue
 
@@ -10,6 +12,16 @@ from render.core import FrameBuilder
 from snakes.autoSnake4 import AutoSnake4
 
 MAX_STREAMS = 5
+
+log = logging.getLogger('main')
+log.setLevel(logging.DEBUG)
+
+# Create handler
+handler = RotatingFileHandler('app.log', maxBytes=20000, backupCount=5)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+# Add handler to log
+log.addHandler(handler)
 
 app = FastAPI()
 nr_of_streams = 0
@@ -39,7 +51,7 @@ def start_stream_run(conn, config):
             break
     env.stream_run(conn,)
     conn.close()
-    print('Stream run finished')
+    log.info('Stream run finished')
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -47,7 +59,7 @@ async def websocket_endpoint(websocket: WebSocket):
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
         nr_of_streams += 1
-        print('Accepted connection nr:', nr_of_streams)
+        log.info('Accepted connection nr:', nr_of_streams)
     else:
         return
     # Receive initial configuration data
@@ -55,7 +67,7 @@ async def websocket_endpoint(websocket: WebSocket):
         config = await websocket.receive_json()
         data_mode = config.get('data_mode', 'steps')
         ack = 'ACK'
-        print('sending', ack)
+        log.info('sending', ack)
         await websocket.send_text(ack)
         parent_conn, child_conn = Pipe()
         env_p = Process(target=start_stream_run, args=(child_conn, config))
@@ -63,7 +75,7 @@ async def websocket_endpoint(websocket: WebSocket):
         if data_mode == 'pixel_data':
             init_data = await nonblock_exec(parent_conn.recv)
             frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2)
-        print('Sending data with mode: ', data_mode)
+        log.info('Sending data with mode: ', data_mode)
         while env_p.is_alive():
             # Depending on the config, decide what data to send
             if parent_conn.poll(timeout=0.1):
@@ -77,13 +89,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     payload = frame_builder.step_to_pixel_changes(step_data)
                 await websocket.send_json(payload)
     except WebSocketDisconnect as e:
-        print(f"Connection closed with error: {e}")
+        log.error(f"Connection closed with error: {e}")
 
     except Exception as e:
-        print(e)
+        log.error(e)
 
     finally:
-        print('Closing connection')
+        log.error('Closing connection')
         nr_of_streams -= 1
         env_p.terminate()
         await websocket.close()
