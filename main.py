@@ -9,10 +9,6 @@ from snake_env import SnakeEnv
 from render.core import FrameBuilder
 from snakes.autoSnake4 import AutoSnake4
 
-from snake_sim.snake_env import SnakeEnv
-from snake_sim.render.core import FrameBuilder
-from snake_sim.snakes.autoSnake4 import AutoSnake4
-
 MAX_STREAMS = 5
 
 app = FastAPI()
