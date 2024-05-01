@@ -17,11 +17,12 @@ log = logging.getLogger('main')
 log.setLevel(logging.DEBUG)
 
 # Create handler
-handler = RotatingFileHandler('app.log', maxBytes=20000, backupCount=5)
+handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-
+stdout_handler = logging.StreamHandler(sys.stdout)
 # Add handler to log
 log.addHandler(handler)
+log.addHandler(stdout_handler)
 
 app = FastAPI()
 nr_of_streams = 0
@@ -59,7 +60,7 @@ async def websocket_endpoint(websocket: WebSocket):
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
         nr_of_streams += 1
-        log.info('Accepted connection nr:', nr_of_streams)
+        log.info(f'Accepted connection nr: {nr_of_streams}')
     else:
         return
     # Receive initial configuration data
@@ -67,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket):
         config = await websocket.receive_json()
         data_mode = config.get('data_mode', 'steps')
         ack = 'ACK'
-        log.info('sending', ack)
+        log.info(f'sending {ack} to client')
         await websocket.send_text(ack)
         parent_conn, child_conn = Pipe()
         env_p = Process(target=start_stream_run, args=(child_conn, config))
@@ -75,7 +76,7 @@ async def websocket_endpoint(websocket: WebSocket):
         if data_mode == 'pixel_data':
             init_data = await nonblock_exec(parent_conn.recv)
             frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2)
-        log.info('Sending data with mode: ', data_mode)
+        log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
             if parent_conn.poll(timeout=0.1):

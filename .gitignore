@@ -2,3 +2,4 @@
 *.pyc
 server_venv/
 runs/
+logs/
