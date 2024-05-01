@@ -6,7 +6,7 @@ from multiprocessing import Pipe, Process
 from snake_sim.render.pygame_render import play_stream
 
 async def snake_stream():
-    uri = "ws://DESKTOP-9PJQ0A4:42069/ws"
+    uri = "ws://homeserver:42069/ws"
     websocket = None
     parent_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
