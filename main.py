@@ -16,6 +16,9 @@ MAX_STREAMS = 5
 log = logging.getLogger('main')
 log.setLevel(logging.DEBUG)
 
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
 # Create handler
 handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
