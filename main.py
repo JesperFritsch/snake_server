@@ -75,7 +75,7 @@ async def websocket_endpoint(websocket: WebSocket):
         env_p.start()
         if data_mode == 'pixel_data':
             init_data = await nonblock_exec(parent_conn.recv)
-            frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2)
+            frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2, offset=(1, 1))
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
