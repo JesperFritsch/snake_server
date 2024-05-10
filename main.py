@@ -104,5 +104,6 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info('Cleaning up...')
         nr_of_streams -= 1
         env_p.terminate()
+        env_p.join()
         if websocket.state != WebSocketState.DISCONNECTED:
             await websocket.close()
