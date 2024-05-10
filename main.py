@@ -5,6 +5,7 @@ import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
 from multiprocessing import Pipe, Process, Queue, get_context
 
 from snake_env import SnakeEnv
@@ -103,4 +104,5 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info('Cleaning up...')
         nr_of_streams -= 1
         env_p.terminate()
-        await websocket.close()
+        if websocket.state == WebSocketState.CONNECTED:
+            await websocket.close()
