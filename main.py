@@ -5,7 +5,7 @@ import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from multiprocessing import Pipe, Process, Queue
+from multiprocessing import Pipe, Process, Queue, get_context
 
 from snake_env import SnakeEnv
 from render.core import FrameBuilder
@@ -74,7 +74,8 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'sending {ack} to client')
         await websocket.send_text(ack)
         parent_conn, child_conn = Pipe()
-        env_p = Process(target=start_stream_run, args=(child_conn, config))
+        mp_context = get_context('spawn')
+        env_p = mp_context.Process(target=start_stream_run, args=(child_conn, config))
         env_p.start()
         if data_mode == 'pixel_data':
             init_data = await nonblock_exec(parent_conn.recv)
@@ -93,13 +94,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     payload = frame_builder.step_to_pixel_changes(step_data)
                 await websocket.send_json(payload)
     except WebSocketDisconnect as e:
-        log.error(f"Connection closed with error: {e}")
+        log.info(f"Connection closed")
 
     except Exception as e:
         log.error(e)
 
     finally:
-        log.error('Closing connection')
+        log.error('Cleaning up...')
         nr_of_streams -= 1
-        env_p.close()
+        env_p.terminate()
         await websocket.close()
