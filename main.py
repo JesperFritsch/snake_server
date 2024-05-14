@@ -46,12 +46,13 @@ def start_stream_run(conn, config):
     grid_height = config.get('grid_height', 32)
     grid_width = config.get('grid_width', 32)
     food_count = config.get('food_count', 15)
+    calc_timeout = config.get('calc_timeout', 1000)
     env = SnakeEnv(grid_width, grid_height, food_count)
     env.store_runs = False
     count = 0
     for snake_config in snake_defalut_config['snake_configs']:
         count += 1
-        env.add_snake(AutoSnake4(**snake_config['snake']), **snake_config['env'])
+        env.add_snake(AutoSnake4(**snake_config['snake'], calc_timeout=calc_timeout), **snake_config['env'])
         if count == nr_of_snakes:
             break
     env.stream_run(conn,)
