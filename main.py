@@ -8,7 +8,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from multiprocessing import Pipe, Process, Queue, get_context
 
-from snake_sim import SnakeEnv
+from snake_sim.snake_env import SnakeEnv
 from snake_sim.render.core import FrameBuilder
 from snake_sim.snakes.autoSnake4 import AutoSnake4
 
