@@ -31,7 +31,7 @@ log.addHandler(stdout_handler)
 app = FastAPI()
 nr_of_streams = 0
 
-config_json = os.path.join(os.path.dirname(__file__), '..', 'snake_sim', 'default_config.json')
+config_json = os.path.join(os.path.dirname(__file__), '..', 'snake_sim', 'snake_sim', 'config', 'default_config.json')
 
 with open(config_json, 'r') as f:
     snake_defalut_config = json.load(f)
