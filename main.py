@@ -95,6 +95,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 elif data_mode == 'pixel_data':
                     payload = frame_builder.step_to_pixel_changes(step_data)
                 await websocket.send_json(payload)
+        await websocket.send_text('END')
     except WebSocketDisconnect as e:
         log.info(f"Connection closed")
 
