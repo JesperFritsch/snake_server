@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import json
+import struct
 from multiprocessing import Pipe, Process
 
 from snake_sim.render.pygame_render import play_stream
@@ -8,19 +9,31 @@ from snake_sim.render.pygame_render import play_stream
 async def snake_stream():
     uri = "ws://homeserver:42069/ws"
     websocket = None
-    parent_conn, child_conn = Pipe()
+    render_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
+    data_mode = "steps"
+    run_config = {
+        "grid_width": 32,
+        "grid_height": 32,
+        "food_count": 15,
+        "nr_of_snakes": 7,
+        "data_mode": data_mode
+    }
     try:
         websocket = await websockets.connect(uri)
-        await websocket.send('{"grid_width": 5, "grid_height": 5, "food_count": 15, "nr_of_snakes": 7}')
+        await websocket.send(json.dumps(run_config))
         ack = await websocket.recv()
+        init_data = await websocket.recv()
+        render_conn.send(json.loads(init_data))
         print(ack)
         while render_p.is_alive():
             data = await websocket.recv()
-            print(f"Received data: {data}, type: {type(data)}")
-            data_dict = json.loads(data)
-            parent_conn.send(data_dict)
+            if data_mode == "steps":
+                converted_data = json.loads(data)
+            else:
+                converted_data = [((x, y), (r, g, b)) for x, y, r, g, b in struct.iter_unpack("BBBBB", data)]
+            render_conn.send(converted_data)
     except websockets.exceptions.ConnectionClosed as e:
         print(f"Connection closed: {e}")
     except Exception as e:

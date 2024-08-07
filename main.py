@@ -94,6 +94,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     break
                 if data_mode == 'steps':
                     payload = step_data
+                    await websocket.send_json(payload)
                 elif data_mode == 'pixel_data':
                     changes = frame_builder.step_to_pixel_changes(step_data)
                     for change in changes:
