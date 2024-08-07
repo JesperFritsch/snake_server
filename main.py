@@ -79,8 +79,10 @@ async def websocket_endpoint(websocket: WebSocket):
         mp_context = get_context('spawn')
         env_p = mp_context.Process(target=start_stream_run, args=(child_conn, config))
         env_p.start()
+        init_data = await nonblock_exec(parent_conn.recv)
+        # pass init data to client
+        await websocket.send_json(init_data)
         if data_mode == 'pixel_data':
-            init_data = await nonblock_exec(parent_conn.recv)
             frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2, offset=(1, 1))
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
@@ -93,8 +95,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 if data_mode == 'steps':
                     payload = step_data
                 elif data_mode == 'pixel_data':
-                    payload = frame_builder.step_to_pixel_changes(step_data)
-                await websocket.send_json(payload)
+                    changes = frame_builder.step_to_pixel_changes(step_data)
+                    for change in changes:
+                        flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
+                        payload = bytes(flattened_payload)
+                        await websocket.send_bytes(payload)
         await websocket.send_text('END')
     except WebSocketDisconnect as e:
         log.info(f"Connection closed")
@@ -107,4 +112,5 @@ async def websocket_endpoint(websocket: WebSocket):
         nr_of_streams -= 1
         env_p.close()
         if websocket.state != WebSocketState.DISCONNECTED:
+            await websocket.send_text('END')
             await websocket.close()

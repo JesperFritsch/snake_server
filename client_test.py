@@ -13,11 +13,12 @@ async def snake_stream():
     render_p.start()
     try:
         websocket = await websockets.connect(uri)
-        await websocket.send('{"grid_width": 32, "grid_height": 32, "food_count": 15, "nr_of_snakes": 7}')
+        await websocket.send('{"grid_width": 5, "grid_height": 5, "food_count": 15, "nr_of_snakes": 7}')
         ack = await websocket.recv()
         print(ack)
         while render_p.is_alive():
             data = await websocket.recv()
+            print(f"Received data: {data}, type: {type(data)}")
             data_dict = json.loads(data)
             parent_conn.send(data_dict)
     except websockets.exceptions.ConnectionClosed as e:
