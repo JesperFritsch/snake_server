@@ -51,23 +51,27 @@ class DataOnDemand:
         self.data_buffer.append(data)
 
     async def handler(self):
-        while not self.data_end or len(self.data_buffer) > 0:
-            if self.on_demand:
-                req = await self.websocket.receive_text()
-                get, nr = req.split(' ')
-                nr_changes = int(nr)
-            else:
-                nr_changes = 1
-                await asyncio.sleep(self.yield_time)
-            count = 0
-            while count < nr_changes:
-                count += 1
-                if len(self.data_buffer) > 0:
-                    data = self.data_buffer.popleft()
-                    if self.data_mode == 'steps':
-                        await self.websocket.send_json(data)
-                    elif self.data_mode == 'pixel_data':
-                        await self.websocket.send_bytes(data)
+        try:
+            while not self.data_end or len(self.data_buffer) > 0:
+                if self.on_demand:
+                    req = await self.websocket.receive_text()
+                    get, nr = req.split(' ')
+                    nr_changes = int(nr)
+                else:
+                    nr_changes = 1
+                    await asyncio.sleep(self.yield_time)
+                count = 0
+                while count < nr_changes:
+                    count += 1
+                    if len(self.data_buffer) > 0:
+                        data = self.data_buffer.popleft()
+                        if self.data_mode == 'steps':
+                            await self.websocket.send_json(data)
+                        elif self.data_mode == 'pixel_data':
+                            await self.websocket.send_bytes(data)
+        except WebSocketDisconnect:
+            log.info('Connection closed')
+            return
 
 async def nonblock_exec(func, *args):
     return await asyncio.to_thread(func, *args)
