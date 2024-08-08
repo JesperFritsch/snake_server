@@ -6,10 +6,10 @@ from multiprocessing import Pipe, Process
 
 from snake_sim.render.pygame_render import play_stream
 
-async def get_on_demand(websocket):
+async def request_data(websocket):
     while True:
         try:
-            await websocket.send("GET 10")
+            await websocket.send("GET 1")
             await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             print("Cancelled")
@@ -22,13 +22,14 @@ async def snake_stream():
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
     data_mode = "steps"
+    data_on_demand = True
     run_config = {
         "grid_width": 10,
         "grid_height": 10,
         "food_count": 15,
         "nr_of_snakes": 7,
         "data_mode": data_mode,
-        "data_on_demand": True
+        "data_on_demand": data_on_demand
     }
     try:
         websocket = await websockets.connect(uri)
@@ -36,7 +37,8 @@ async def snake_stream():
         ack = await websocket.recv()
         init_data = await websocket.recv()
         render_conn.send(json.loads(init_data))
-        get_data_task = asyncio.create_task(get_on_demand(websocket))
+        if data_on_demand:
+            get_data_task = asyncio.create_task(request_data(websocket))
         print(ack)
         while render_p.is_alive():
             data = await websocket.recv()
@@ -52,7 +54,8 @@ async def snake_stream():
     except Exception as e:
         print(f"Error: {e}")
     finally:
-        get_data_task.cancel()
+        if "get_data_task" in locals():
+            get_data_task.cancel()
         if websocket is not None:
             await websocket.close()
             print("WebSocket closed.")
