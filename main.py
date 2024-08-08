@@ -100,6 +100,7 @@ async def websocket_endpoint(websocket: WebSocket):
         nr_of_streams += 1
         log.info(f'Accepted connection nr: {nr_of_streams}')
     else:
+        await websocket.close()
         return
         # Receive initial configuration data
     try:
