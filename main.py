@@ -152,6 +152,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 except EOFError:
                     break
         dod.data_end = True
+        log.info('sending remaining data')
+        await dod_task
 
     except WebSocketDisconnect as e:
         log.info(f"Connection closed by client")
@@ -161,8 +163,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     finally:
         if websocket.application_state != WebSocketState.DISCONNECTED:
-            log.info('sending remaining data')
-            await dod_task
             await websocket.send_text('END')
             await websocket.close()
         stream_connections.pop(stream_id)
