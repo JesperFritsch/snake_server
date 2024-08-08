@@ -165,6 +165,8 @@ async def websocket_endpoint(websocket: WebSocket):
             await dod_task
             await websocket.send_text('END')
             await websocket.close()
+        stream_connections.pop(stream_id)
+
         log.info(f'Cleaning up {stream_id} ...')
         try:
             snake_sim_pipe.send('stop')
