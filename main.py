@@ -61,6 +61,7 @@ class DataOnDemand:
                     get, nr = req.split(' ')
                     nr_changes = int(nr)
                     log.debug(f"Requested {nr_changes} changes")
+                    log.debug(f"Changes buffer size: {len(self.data_buffer)}")
                 else:
                     nr_changes = 1
                     await asyncio.sleep(self.yield_time)
