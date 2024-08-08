@@ -158,6 +158,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.error(e)
 
     finally:
+        print(websocket.state)
         if websocket.state == WebSocketState.CONNECTED:
             log.info('sending remaining data')
             await dod_task
