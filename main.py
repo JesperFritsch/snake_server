@@ -166,7 +166,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.error(e)
 
     finally:
-        if websocket.application_state == WebSocketState.CONNECTED:
+        if websocket.application_state == WebSocketState.CONNECTED and websocket.client_state == WebSocketState.CONNECTED:
             await websocket.send_text('END')
             await websocket.close()
         stream_connections.pop(stream_id)
