@@ -136,7 +136,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
-            print('in loop')
+            print(websocket.state)
             if snake_sim_pipe.poll(timeout=0.1):
                 try:
                     step_data = await nonblock_exec(snake_sim_pipe.recv)
