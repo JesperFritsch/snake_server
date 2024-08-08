@@ -24,8 +24,8 @@ async def snake_stream():
     data_mode = "steps"
     data_on_demand = False
     run_config = {
-        "grid_width": 10,
-        "grid_height": 10,
+        "grid_width": 32,
+        "grid_height": 32,
         "food_count": 15,
         "nr_of_snakes": 7,
         "data_mode": data_mode,
@@ -42,6 +42,8 @@ async def snake_stream():
         print(ack)
         while render_p.is_alive():
             data = await websocket.recv()
+            if data == "END":
+                break
             if data_mode == "steps":
                 converted_data = json.loads(data)
             else:
