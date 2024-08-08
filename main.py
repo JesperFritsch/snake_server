@@ -28,6 +28,7 @@ handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 stdout_handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 stdout_handler.setFormatter(formatter)
+# stdout_handler.setLevel(logging.INFO)
 # Add handler to log
 log.addHandler(handler)
 log.addHandler(stdout_handler)
@@ -47,6 +48,7 @@ class DataOnDemand:
         self.websocket = websocket
         self.on_demand = on_demand
         self.data_end = False
+        self.changes_to_send = 0
         self.yield_time = 0.01
         self.data_buffer = deque()
 
@@ -62,11 +64,13 @@ class DataOnDemand:
                     nr_changes = int(nr)
                     log.debug(f"Requested {nr_changes} changes")
                     log.debug(f"Changes buffer size: {len(self.data_buffer)}")
+                    self.changes_to_send += nr_changes
+                    log.debug(f"Changes to send: {self.changes_to_send}")
                 else:
                     nr_changes = 1
                     await asyncio.sleep(self.yield_time)
                 count = 0
-                while count < nr_changes:
+                while count < self.changes_to_send:
                     count += 1
                     if len(self.data_buffer) > 0:
                         data = self.data_buffer.popleft()
@@ -74,6 +78,7 @@ class DataOnDemand:
                             await self.websocket.send_json(data)
                         elif self.data_mode == 'pixel_data':
                             await self.websocket.send_bytes(data)
+                        self.changes_to_send -= 1
         except WebSocketDisconnect:
             raise
         except Exception as e:
