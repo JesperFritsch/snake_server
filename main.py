@@ -71,10 +71,10 @@ class DataOnDemand:
                         elif self.data_mode == 'pixel_data':
                             await self.websocket.send_bytes(data)
         except WebSocketDisconnect:
-            raise asyncio.CancelledError
+            raise
         except Exception as e:
             log.error(e)
-            raise asyncio.CancelledError
+            return
 
 async def nonblock_exec(func, *args):
     return await asyncio.to_thread(func, *args)
@@ -157,6 +157,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect as e:
         log.info(f"Connection closed by client")
+        dod_task.cancel()
 
     except Exception as e:
         log.error(e)
