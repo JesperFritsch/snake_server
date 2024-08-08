@@ -68,7 +68,7 @@ class DataOnDemand:
                         self.changes_to_send += nr_changes
                         log.debug(f"Changes to send: {self.changes_to_send}")
                     except asyncio.TimeoutError:
-                        pass
+                        log.debug('Timeout')
                 else:
                     self.changes_to_send = len(self.data_buffer)
                     await asyncio.sleep(self.yield_time)
