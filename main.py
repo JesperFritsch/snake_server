@@ -101,14 +101,16 @@ def start_stream_run(conn, config):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global nr_of_streams
-    log.info(f"incoming connection nr: {nr_of_streams}")
+    new_stream = nr_of_streams + 1
+    log.info(f"incoming connection nr: {new_stream}")
+    env_p = None
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
+        log.info(f'Accepted connection nr: {new_stream}')
         nr_of_streams += 1
-        log.info(f'Accepted connection nr: {nr_of_streams}')
     else:
         await websocket.close()
-        log.info(f'Rejected connection nr: {nr_of_streams}')
+        log.info(f'Rejected connection nr: {new_stream}')
         return
         # Receive initial configuration data
     try:
@@ -160,5 +162,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text('END')
             await websocket.close()
         log.info('Cleaning up...')
-        env_p.close()
+        if env_p:
+            env_p.close()
         nr_of_streams -= 1
