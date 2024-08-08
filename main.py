@@ -17,7 +17,7 @@ from snake_sim.snakes.autoSnake4 import AutoSnake4
 MAX_STREAMS = 5
 
 log = logging.getLogger('main')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -28,7 +28,7 @@ handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 stdout_handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 stdout_handler.setFormatter(formatter)
-# stdout_handler.setLevel(logging.INFO)
+# stdout_handler.setLevel(logging.DEBUG)
 # Add handler to log
 log.addHandler(handler)
 log.addHandler(stdout_handler)
@@ -68,7 +68,7 @@ class DataOnDemand:
                         self.changes_to_send += nr_changes
                         log.debug(f"Changes to send: {self.changes_to_send}")
                     except asyncio.TimeoutError:
-                        log.debug('Timeout')
+                        pass
                 else:
                     self.changes_to_send = len(self.data_buffer)
                     await asyncio.sleep(self.yield_time)
