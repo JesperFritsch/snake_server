@@ -101,12 +101,14 @@ def start_stream_run(conn, config):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global nr_of_streams
+    log.info(f"incoming connection nr: {nr_of_streams}")
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
         nr_of_streams += 1
         log.info(f'Accepted connection nr: {nr_of_streams}')
     else:
         await websocket.close()
+        log.info(f'Rejected connection nr: {nr_of_streams}')
         return
         # Receive initial configuration data
     try:
