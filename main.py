@@ -23,9 +23,11 @@ if not os.path.exists('logs'):
     os.makedirs('logs')
 
 # Create handler
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 stdout_handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+stdout_handler.setFormatter(formatter)
 # Add handler to log
 log.addHandler(handler)
 log.addHandler(stdout_handler)
@@ -58,6 +60,7 @@ class DataOnDemand:
                     req = await self.websocket.receive_text()
                     get, nr = req.split(' ')
                     nr_changes = int(nr)
+                    log.debug(f"Requested {nr_changes} changes")
                 else:
                     nr_changes = 1
                     await asyncio.sleep(self.yield_time)
