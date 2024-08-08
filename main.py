@@ -103,7 +103,9 @@ async def websocket_endpoint(websocket: WebSocket):
     global nr_of_streams
     new_stream = nr_of_streams + 1
     log.info(f"incoming connection nr: {new_stream}")
-    env_p = None
+    mp_context = get_context('spawn')
+    parent_conn, child_conn = Pipe()
+    env_p = mp_context.Process(target=start_stream_run, args=(child_conn, config))
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
         log.info(f'Accepted connection nr: {new_stream}')
@@ -120,9 +122,6 @@ async def websocket_endpoint(websocket: WebSocket):
         ack = 'ACK'
         log.info(f'sending {ack} to client')
         await websocket.send_text(ack)
-        parent_conn, child_conn = Pipe()
-        mp_context = get_context('spawn')
-        env_p = mp_context.Process(target=start_stream_run, args=(child_conn, config))
         env_p.start()
         init_data = await nonblock_exec(parent_conn.recv)
         # pass init data to client
@@ -162,6 +161,9 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text('END')
             await websocket.close()
         log.info('Cleaning up...')
-        parent_conn.send('stop')
-        env_p.join()
+        try:
+            parent_conn.send('stop')
+            env_p.join()
+        except Exception as e:
+            log.error(e)
         nr_of_streams -= 1
