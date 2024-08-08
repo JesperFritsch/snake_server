@@ -162,6 +162,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text('END')
             await websocket.close()
         log.info('Cleaning up...')
-        if env_p:
-            env_p.close()
+        parent_conn.send('stop')
+        env_p.join()
         nr_of_streams -= 1
