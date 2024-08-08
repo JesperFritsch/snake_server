@@ -49,7 +49,7 @@ class DataOnDemand:
         self.on_demand = on_demand
         self.data_end = False
         self.changes_to_send = 0
-        self.yield_time = 0.01
+        self.yield_time = 0.05
         self.data_buffer = deque()
 
     def push_data(self, data):
@@ -59,15 +59,18 @@ class DataOnDemand:
         try:
             while not self.data_end or len(self.data_buffer) > 0:
                 if self.on_demand:
-                    req = await self.websocket.receive_text()
-                    get, nr = req.split(' ')
-                    nr_changes = int(nr)
-                    log.debug(f"Requested {nr_changes} changes")
-                    log.debug(f"Changes buffer size: {len(self.data_buffer)}")
-                    self.changes_to_send += nr_changes
-                    log.debug(f"Changes to send: {self.changes_to_send}")
+                    try:
+                        req = await asyncio.wait_for(self.websocket.receive_text(), timeout=self.yield_time)
+                        get, nr = req.split(' ')
+                        nr_changes = int(nr)
+                        log.debug(f"Requested {nr_changes} changes")
+                        log.debug(f"Changes buffer size: {len(self.data_buffer)}")
+                        self.changes_to_send += nr_changes
+                        log.debug(f"Changes to send: {self.changes_to_send}")
+                    except asyncio.TimeoutError:
+                        pass
                 else:
-                    nr_changes = 1
+                    self.changes_to_send = len(self.data_buffer)
                     await asyncio.sleep(self.yield_time)
                 count = 0
                 while count < self.changes_to_send:
