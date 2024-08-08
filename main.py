@@ -135,13 +135,12 @@ async def websocket_endpoint(websocket: WebSocket):
         dod_task = asyncio.create_task(dod.handler())
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
-            # Depending on the config, decide what data to send
-            print(websocket.application_state, websocket.client_state)
-            if websocket.application_state == WebSocketState.DISCONNECTED:
+            if websocket.application_state == WebSocketState.DISCONNECTED or websocket.client_state == WebSocketState.DISCONNECTED:
                 raise WebSocketDisconnect
             if snake_sim_pipe.poll(timeout=0.1):
                 try:
                     step_data = await nonblock_exec(snake_sim_pipe.recv)
+                    # Depending on the config, decide what data to send
                     if data_mode == 'steps':
                         payload = step_data
                     elif data_mode == 'pixel_data':
