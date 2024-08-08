@@ -143,12 +143,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Depending on the config, decide what data to send
                     if data_mode == 'steps':
                         payload = step_data
+                        dod.push_data(payload)
                     elif data_mode == 'pixel_data':
                         changes = frame_builder.step_to_pixel_changes(step_data)
                         for change in changes:
                             flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
                             payload = bytes(flattened_payload)
-                    dod.push_data(payload)
+                            dod.push_data(payload)
                 except EOFError:
                     break
         dod.data_end = True
