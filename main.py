@@ -136,7 +136,8 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
-            print(websocket.application_state)
+            if websocket.application_state == WebSocketState.DISCONNECTED:
+                raise WebSocketDisconnect
             if snake_sim_pipe.poll(timeout=0.1):
                 try:
                     step_data = await nonblock_exec(snake_sim_pipe.recv)
@@ -153,7 +154,7 @@ async def websocket_endpoint(websocket: WebSocket):
         dod.data_end = True
 
     except WebSocketDisconnect as e:
-        log.info(f"Connection closed by client: {e}")
+        log.info(f"Connection closed by client")
         stream_connections.pop(stream_id)
 
     except Exception as e:
