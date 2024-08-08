@@ -24,8 +24,8 @@ async def snake_stream():
     data_mode = "steps"
     data_on_demand = False
     run_config = {
-        "grid_width": 32,
-        "grid_height": 32,
+        "grid_width": 15,
+        "grid_height": 15,
         "food_count": 15,
         "nr_of_snakes": 7,
         "data_mode": data_mode,
