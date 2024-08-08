@@ -17,7 +17,7 @@ from snake_sim.snakes.autoSnake4 import AutoSnake4
 MAX_STREAMS = 5
 
 log = logging.getLogger('main')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
