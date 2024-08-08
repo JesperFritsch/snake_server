@@ -71,6 +71,9 @@ class DataOnDemand:
                             await self.websocket.send_bytes(data)
         except WebSocketDisconnect:
             return
+        except Exception as e:
+            log.error(e)
+            return
 
 async def nonblock_exec(func, *args):
     return await asyncio.to_thread(func, *args)
