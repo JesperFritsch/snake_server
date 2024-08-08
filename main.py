@@ -154,11 +154,11 @@ async def websocket_endpoint(websocket: WebSocket):
         log.error(e)
 
     finally:
-        log.info('sending remaining data')
-        await dod_task
-        log.info('Cleaning up...')
-        env_p.close()
         if websocket.state == WebSocketState.CONNECTED:
+            log.info('sending remaining data')
+            await dod_task
             await websocket.send_text('END')
             await websocket.close()
+        log.info('Cleaning up...')
+        env_p.close()
         nr_of_streams -= 1
