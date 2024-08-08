@@ -23,8 +23,8 @@ async def snake_stream():
     render_p.start()
     data_mode = "steps"
     run_config = {
-        "grid_width": 32,
-        "grid_height": 32,
+        "grid_width": 10,
+        "grid_height": 10,
         "food_count": 15,
         "nr_of_snakes": 7,
         "data_mode": data_mode,

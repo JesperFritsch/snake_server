@@ -138,7 +138,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 except EOFError:
                     break
         dod.data_end = True
-        await dod_task
 
     except WebSocketDisconnect as e:
         log.info(f"Connection closed")
@@ -147,6 +146,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.error(e)
 
     finally:
+        await dod_task
         log.info('Cleaning up...')
         nr_of_streams -= 1
         env_p.close()
