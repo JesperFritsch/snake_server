@@ -136,7 +136,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
-            print(websocket.application_state)
+            print(websocket.application_state, websocket.client_state)
             if websocket.application_state == WebSocketState.DISCONNECTED:
                 raise WebSocketDisconnect
             if snake_sim_pipe.poll(timeout=0.1):
