@@ -1,5 +1,6 @@
 import json
 import sys
+import uuid
 import os
 import asyncio
 import logging
@@ -30,7 +31,7 @@ log.addHandler(handler)
 log.addHandler(stdout_handler)
 
 app = FastAPI()
-nr_of_streams = 0
+stream_connections = {}
 
 config_json = os.path.join(os.path.dirname(__file__), '..', 'snake_sim', 'snake_sim', 'config', 'default_config.json')
 
@@ -70,7 +71,7 @@ class DataOnDemand:
                         elif self.data_mode == 'pixel_data':
                             await self.websocket.send_bytes(data)
         except WebSocketDisconnect:
-            return
+            raise
         except Exception as e:
             log.error(e)
             return
@@ -100,16 +101,18 @@ def start_stream_run(conn, config):
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global nr_of_streams
-    new_stream = nr_of_streams + 1
-    log.info(f"incoming connection nr: {new_stream}")
+    global stream_connections
+    nr_of_streams = len(stream_connections)
+    stream_id = uuid.uuid4()
+    log.info(f"incoming connection nr: {stream_id}")
+    log.info(f'Nr of active streams: {nr_of_streams}')
     if nr_of_streams < MAX_STREAMS:
         await websocket.accept()
-        log.info(f'Accepted connection nr: {new_stream}')
-        nr_of_streams += 1
+        stream_connections[stream_id] = websocket
+        log.info(f'Accepted connection nr: {stream_id}')
     else:
         await websocket.close()
-        log.info(f'Rejected connection nr: {new_stream}')
+        log.info(f'Rejected connection nr: {stream_id}')
         return
         # Receive initial configuration data
     try:
@@ -120,10 +123,10 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'sending {ack} to client')
         await websocket.send_text(ack)
         mp_context = get_context('spawn')
-        parent_conn, child_conn = Pipe()
-        env_p = mp_context.Process(target=start_stream_run, args=(child_conn, config))
+        snake_sim_pipe, snake_sim_pipe_other = Pipe()
+        env_p = mp_context.Process(target=start_stream_run, args=(snake_sim_pipe_other, config))
         env_p.start()
-        init_data = await nonblock_exec(parent_conn.recv)
+        init_data = await nonblock_exec(snake_sim_pipe.recv)
         # pass init data to client
         await websocket.send_json(init_data)
         if data_mode == 'pixel_data':
@@ -133,9 +136,9 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             # Depending on the config, decide what data to send
-            if parent_conn.poll(timeout=0.1):
+            if snake_sim_pipe.poll(timeout=0.1):
                 try:
-                    step_data = await nonblock_exec(parent_conn.recv)
+                    step_data = await nonblock_exec(snake_sim_pipe.recv)
                     if data_mode == 'steps':
                         payload = step_data
                     elif data_mode == 'pixel_data':
@@ -149,7 +152,7 @@ async def websocket_endpoint(websocket: WebSocket):
         dod.data_end = True
 
     except WebSocketDisconnect as e:
-        log.info(f"Connection closed")
+        log.info(f"Connection closed by client: {e}")
 
     except Exception as e:
         log.error(e)
@@ -160,10 +163,10 @@ async def websocket_endpoint(websocket: WebSocket):
             await dod_task
             await websocket.send_text('END')
             await websocket.close()
-        log.info('Cleaning up...')
+        log.info(f'Cleaning up {stream_id} ...')
         try:
-            parent_conn.send('stop')
+            snake_sim_pipe.send('stop')
             env_p.join()
         except Exception as e:
             log.error(e)
-        nr_of_streams -= 1
+        print(f"Session over: {stream_id}")
