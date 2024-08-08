@@ -70,7 +70,6 @@ class DataOnDemand:
                         elif self.data_mode == 'pixel_data':
                             await self.websocket.send_bytes(data)
         except WebSocketDisconnect:
-            log.info('Connection closed')
             return
 
 async def nonblock_exec(func, *args):
@@ -153,7 +152,7 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info('Cleaning up...')
         nr_of_streams -= 1
         env_p.close()
-        if websocket.state != WebSocketState.DISCONNECTED:
+        if websocket.state == WebSocketState.CONNECTED:
             log.info('sending remaining data')
             await dod_task
             await websocket.send_text('END')
