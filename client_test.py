@@ -24,18 +24,20 @@ async def snake_stream():
     data_mode = "steps"
     data_on_demand = False
     run_config = {
-        "grid_width": 20,
-        "grid_height": 20,
+        "grid_width": 32,
+        "grid_height": 32,
         "food_count": 15,
         "nr_of_snakes": 7,
         "data_mode": data_mode,
-        "data_on_demand": data_on_demand
+        "data_on_demand": data_on_demand,
+        "map": None
     }
     try:
         websocket = await websockets.connect(uri)
         await websocket.send(json.dumps(run_config))
         ack = await websocket.recv()
         init_data = await websocket.recv()
+        print(init_data)
         render_conn.send(json.loads(init_data))
         if data_on_demand:
             get_data_task = asyncio.create_task(request_data(websocket))

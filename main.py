@@ -149,7 +149,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # pass init data to client
         await websocket.send_json(init_data)
         if data_mode == 'pixel_data':
-            frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2, offset=(1, 1))
+            frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2)
         dod = DataOnDemand(websocket, data_mode, data_on_demand)
         dod_task = asyncio.create_task(dod.handler())
         log.info(f'Sending data with mode: {data_mode}')
