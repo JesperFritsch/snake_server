@@ -4,9 +4,13 @@ import uuid
 import os
 import asyncio
 import logging
+
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.websockets import WebSocketState
+from fastapi.responses import JSONResponse
+
 from multiprocessing import Pipe, Process, Queue, get_context
 from collections import deque
 
@@ -117,6 +121,19 @@ def start_stream_run(conn, config):
     env.stream_run(conn,)
     conn.close()
     log.info('Stream run finished')
+
+@app.get("/api/config_data")
+async def get_config_data(conf: list[str] = Query([])):
+    unhandled = conf.copy()
+    resp = {}
+    if 'maps' in conf:
+        maps = list(SnakeEnv.get_map_files().keys())
+        resp['maps'] = maps
+        unhandled.remove('maps')
+
+    for key in unhandled:
+        resp[key] = 'Not implemented'
+    return JSONResponse(content=resp)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
