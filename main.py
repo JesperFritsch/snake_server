@@ -102,9 +102,10 @@ def start_stream_run(conn, config):
     grid_height = config.get('grid_height', 32)
     grid_width = config.get('grid_width', 32)
     food_count = config.get('food_count', 15)
+    food_decay = config.get('food_decay', None)
     calc_timeout = config.get('calc_timeout', 1000)
     snake_map = config.get('map', None)
-    env = SnakeEnv(grid_width, grid_height, food_count)
+    env = SnakeEnv(grid_width, grid_height, food_count, food_decay)
     if snake_map:
         try:
             env.load_png_map(snake_map)
