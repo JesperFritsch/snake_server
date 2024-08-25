@@ -109,7 +109,7 @@ def start_stream_run(conn, config):
     if snake_map:
         try:
             env.load_png_map(snake_map)
-        except FileNotFoundError:
+        except ValueError:
             log.error(f"Map file not found: {snake_map}, using no map")
 
     env.store_runs = False
