@@ -4,6 +4,7 @@ import uuid
 import os
 import asyncio
 import logging
+import pkg_resources
 
 from logging.handlers import RotatingFileHandler
 
@@ -17,11 +18,13 @@ from collections import deque
 from snake_sim.snake_env import SnakeEnv
 from snake_sim.render.core import FrameBuilder
 from snake_sim.snakes.auto_snake import AutoSnake
+from snake_sim.main import start_stream_run, start_game_run
+from snake_sim.utils import DotDict
 
 MAX_STREAMS = 5
 
 log = logging.getLogger('main')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -32,7 +35,7 @@ handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 stdout_handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 stdout_handler.setFormatter(formatter)
-# stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setLevel(logging.DEBUG)
 # Add handler to log
 log.addHandler(handler)
 log.addHandler(stdout_handler)
@@ -40,13 +43,15 @@ log.addHandler(stdout_handler)
 app = FastAPI()
 stream_connections = {}
 
-config_json = os.path.join(os.path.dirname(__file__), '..', 'snake_sim', 'snake_sim', 'config', 'default_config.json')
 
-with open(config_json, 'r') as f:
-    snake_defalut_config = json.load(f)
+def get_default_config():
+    config_json = pkg_resources.resource_filename('snake_sim', 'config/default_config.json')
+    with open(config_json, 'r') as f:
+        default_config = json.load(f)
+    return DotDict(default_config)
 
 
-class DataOnDemand:
+class DataStreamHandler:
     def __init__(self, websocket: WebSocket, data_mode: str, on_demand: bool):
         self.data_mode = data_mode
         self.websocket = websocket
@@ -96,33 +101,6 @@ async def nonblock_exec(func, *args):
     return await asyncio.to_thread(func, *args)
 
 
-def start_stream_run(conn, config):
-    sys.stdout = open(os.devnull, 'w')
-    nr_of_snakes = config.get('nr_of_snakes', 7)
-    grid_height = config.get('grid_height', 32)
-    grid_width = config.get('grid_width', 32)
-    food_count = config.get('food_count', 15)
-    food_decay = config.get('food_decay', None)
-    calc_timeout = config.get('calc_timeout', 1000)
-    snake_map = config.get('map', None)
-    env = SnakeEnv(grid_width, grid_height, food_count, food_decay)
-    if snake_map:
-        try:
-            env.load_png_map(snake_map)
-        except ValueError:
-            log.error(f"Map file not found: {snake_map}, using no map")
-
-    env.store_runs = False
-    count = 0
-    for snake_config in snake_defalut_config['snake_configs']:
-        count += 1
-        env.add_snake(AutoSnake(**snake_config['snake'], calc_timeout=calc_timeout), **snake_config['env'])
-        if count == nr_of_snakes:
-            break
-    env.stream_run(conn,)
-    conn.close()
-    log.info('Stream run finished')
-
 @app.get("/api/config_data")
 async def get_config_data(conf: list[str] = Query([])):
     unhandled = conf.copy()
@@ -135,6 +113,7 @@ async def get_config_data(conf: list[str] = Query([])):
     for key in unhandled:
         resp[key] = 'Not implemented'
     return JSONResponse(content=resp)
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -153,7 +132,9 @@ async def websocket_endpoint(websocket: WebSocket):
         return
         # Receive initial configuration data
     try:
-        config = await websocket.receive_json()
+        config = get_default_config()
+        run_metadata = await websocket.receive_json()
+        config.update(run_metadata)
         data_mode = config.get('data_mode', 'steps')
         data_on_demand = config.get('data_on_demand', False)
         ack = 'ACK'
@@ -168,8 +149,8 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.send_json(init_data)
         if data_mode == 'pixel_data':
             frame_builder = FrameBuilder(run_meta_data=init_data, expand_factor=2, offset=(0, 0))
-        dod = DataOnDemand(websocket, data_mode, data_on_demand)
-        dod_task = asyncio.create_task(dod.handler())
+        data_stream = DataStreamHandler(websocket, data_mode, data_on_demand)
+        data_stream_task = asyncio.create_task(data_stream.handler())
         log.info(f'Sending data with mode: {data_mode}')
         while env_p.is_alive():
             if websocket.application_state == WebSocketState.DISCONNECTED or websocket.client_state == WebSocketState.DISCONNECTED:
@@ -182,23 +163,23 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Depending on the config, decide what data to send
                     if data_mode == 'steps':
                         payload = step_data
-                        dod.push_data(payload)
+                        data_stream.push_data(payload)
                     elif data_mode == 'pixel_data':
                         changes = frame_builder.step_to_pixel_changes(step_data)
                         for change in changes:
                             flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
                             payload = bytes(flattened_payload)
-                            dod.push_data(payload)
+                            data_stream.push_data(payload)
                 except EOFError:
                     break
-        dod.data_end = True
+        data_stream.data_end = True
         log.info('sending remaining data')
-        await dod_task
+        await data_stream_task
 
     except WebSocketDisconnect as e:
         log.info(f"Connection closed by client")
         try:
-            dod_task.cancel()
+            data_stream_task.cancel()
         except:
             pass
 

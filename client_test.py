@@ -16,7 +16,7 @@ async def request_data(websocket):
             break
 
 async def snake_stream():
-    uri = "ws://homeserver:42069/ws"
+    uri = "ws://localhost:42069/ws"
     websocket = None
     render_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
@@ -27,7 +27,7 @@ async def snake_stream():
         "grid_width": 32,
         "grid_height": 32,
         "food_count": 15,
-        "nr_of_snakes": 7,
+        "snake_count": 1,
         "data_mode": data_mode,
         "data_on_demand": data_on_demand,
         "map": None
