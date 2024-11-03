@@ -177,6 +177,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if snake_sim_pipe.poll(timeout=0.1):
                 try:
                     step_data = await nonblock_exec(snake_sim_pipe.recv)
+                    if step_data == 'stopped':
+                        break
                     # Depending on the config, decide what data to send
                     if data_mode == 'steps':
                         payload = step_data
