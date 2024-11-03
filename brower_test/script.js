@@ -1,6 +1,6 @@
 console.log('script.js');
 
-const WS_URL = 'ws://homeserver:42069/ws';
+const WS_URL = 'ws://localhost:42069/ws';
 
 const basic_config = {
     grid_width: 32,

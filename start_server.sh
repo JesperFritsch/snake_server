@@ -17,7 +17,7 @@ if [[ "$(uname -s)" == *"CYGWIN"* || "$(uname -s)" == *"MINGW"* || "$(uname -s)"
   source /b/pythonStuff/snake_server/server_venv/Scripts/activate
 else
   # Unix-like system path
-  source /home/jesper/snake_server/server_venv/bin/activate
+  source /home/jesper/py_fun/snake_server/server_venv/bin/activate
 fi
 
 umask 000

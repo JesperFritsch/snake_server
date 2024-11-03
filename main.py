@@ -5,6 +5,7 @@ import os
 import asyncio
 import logging
 
+from typing import List
 from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
@@ -21,7 +22,7 @@ from snake_sim.snakes.auto_snake import AutoSnake
 MAX_STREAMS = 5
 
 log = logging.getLogger('main')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -32,7 +33,7 @@ handler = RotatingFileHandler('logs/app.log', maxBytes=20000, backupCount=5)
 stdout_handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 stdout_handler.setFormatter(formatter)
-# stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setLevel(logging.DEBUG)
 # Add handler to log
 log.addHandler(handler)
 log.addHandler(stdout_handler)
@@ -97,7 +98,7 @@ async def nonblock_exec(func, *args):
 
 
 def start_stream_run(conn, config):
-    sys.stdout = open(os.devnull, 'w')
+    # sys.stdout = open(os.devnull, 'w')
     nr_of_snakes = config.get('nr_of_snakes', 7)
     grid_height = config.get('grid_height', 32)
     grid_width = config.get('grid_width', 32)
@@ -124,7 +125,7 @@ def start_stream_run(conn, config):
     log.info('Stream run finished')
 
 @app.get("/api/config_data")
-async def get_config_data(conf: list[str] = Query([])):
+async def get_config_data(conf: List[str] = Query([])):
     unhandled = conf.copy()
     resp = {}
     if 'maps' in conf:
@@ -177,6 +178,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if snake_sim_pipe.poll(timeout=0.1):
                 try:
                     step_data = await nonblock_exec(snake_sim_pipe.recv)
+                    if step_data == 'stopped':
+                        break
                     # Depending on the config, decide what data to send
                     if data_mode == 'steps':
                         payload = step_data
@@ -202,6 +205,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except Exception as e:
         log.error(e)
+        log.debug("TRACEBACK", exc_info=True)
 
     finally:
         if websocket.application_state == WebSocketState.CONNECTED and websocket.client_state == WebSocketState.CONNECTED:
