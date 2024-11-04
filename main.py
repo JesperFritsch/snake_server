@@ -1,6 +1,7 @@
 import json
 import sys
 import uuid
+import time
 import os
 import asyncio
 import logging
@@ -8,9 +9,9 @@ import pkg_resources
 
 from logging.handlers import RotatingFileHandler
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.websockets import WebSocketState
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from multiprocessing import Pipe, Process, Queue, get_context
 from collections import deque
@@ -20,6 +21,9 @@ from snake_sim.render.core import FrameBuilder
 from snake_sim.snakes.auto_snake import AutoSnake
 from snake_sim.main import start_stream_run, start_game_run
 from snake_sim.utils import DotDict
+from snake_sim.render.core import FrameBuilder
+
+from process_pool import MultiStreamManager
 
 MAX_STREAMS = 5
 
@@ -41,8 +45,8 @@ log.addHandler(handler)
 log.addHandler(stdout_handler)
 
 app = FastAPI()
-stream_connections = {}
 
+stream_manager = MultiStreamManager()
 
 def get_default_config():
     config_json = pkg_resources.resource_filename('snake_sim', 'config/default_config.json')
@@ -113,6 +117,88 @@ async def get_config_data(conf: list[str] = Query([])):
     for key in unhandled:
         resp[key] = 'Not implemented'
     return JSONResponse(content=resp)
+
+
+@app.get("/api/stop_stream")
+async def stop_stream(stream_id: uuid.UUID):
+    str_stream_id = str(stream_id)
+    print(f"Stopping stream: {str_stream_id}")
+    stopped = stream_manager.stop_stream(str_stream_id)
+    if stopped:
+        return JSONResponse(content={'status': 'stopped'})
+    else:
+        return JSONResponse(content={'status': 'not found'}, status_code=404)
+
+@app.post("/api/request_run")
+async def request_run(request: Request):
+    config = get_default_config()
+    config_dict = await request.json()
+    config.update(config_dict)
+    stream_id = stream_manager.start_stream(config)
+    if stream_id:
+        return JSONResponse(content={'stream_id': stream_id})
+    else:
+        return JSONResponse(content={'error': 'Maximum number of streams reached'}, status_code=503)
+
+
+@app.get("/api/run_info")
+async def get_run_info():
+    data = stream_manager.get_current_run_data()
+    print(stream_manager.running_processes)
+    print(stream_manager.run_configs)
+    return JSONResponse(content=data)
+
+@app.get("/stream/{stream_id}")
+async def get_stream_data(stream_id: uuid.UUID, data_mode: str = 'pixel_data'):
+    str_stream_id = str(stream_id)
+    if not str_stream_id in stream_manager.stream_buffers:
+        return JSONResponse(content={'error': 'Stream not found'}, status_code=404)
+
+    try_count = 0
+    while try_count < 5:
+        try_count += 1
+        try:
+            stream_buffer = stream_manager.stream_buffers[str_stream_id]
+        except KeyError:
+            asyncio.sleep(0.1)
+
+    start_time = time.time()
+    while len(stream_buffer) == 0 and time.time() - start_time < 5:
+        await asyncio.sleep(0.1)
+
+    # If no data is available, return 501
+    if len(stream_buffer) == 0:
+        return JSONResponse(content={'error': 'Something went wrong on the server'}, status_code=501)
+
+    if data_mode == 'pixel_data':
+        frame_builder = FrameBuilder(run_meta_data=stream_buffer[0], expand_factor=2, offset=(1, 1))
+    else:
+        frame_builder = None
+
+    def stream_generator(frame_builder=frame_builder, data_mode=data_mode, stream_buffer=stream_buffer):
+        msg_count = 0
+        while True:
+            try:
+                if msg_count < len(stream_buffer):
+                    if data_mode == 'steps':
+                        data = stream_buffer[msg_count]
+                        msg_count += 1
+                        yield json.dumps(data)
+                    else:
+                        changes = frame_builder.step_to_pixel_changes(stream_buffer[msg_count])
+                        for change in changes:
+                            flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
+                            payload = bytes(flattened_payload)
+                            msg_count += 1
+                            yield payload
+            except WebSocketDisconnect:
+                break
+    media_type = 'application/octet-stream' if data_mode == 'pixel_data' else 'application/json'
+    return StreamingResponse(stream_generator(
+        frame_builder=frame_builder,
+        data_mode=data_mode,
+        stream_buffer=stream_buffer
+    ), media_type=media_type)
 
 
 @app.websocket("/ws")
