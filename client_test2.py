@@ -2,10 +2,16 @@ import asyncio
 import websockets
 import json
 import struct
-import httpx
+import requests
+import logging
+from urllib.parse import urljoin, urlencode
 from multiprocessing import Pipe, Process
 
 from snake_sim.render.pygame_render import play_stream
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(logging.StreamHandler())
 
 async def request_data(websocket):
     while True:
@@ -16,35 +22,68 @@ async def request_data(websocket):
             print("Cancelled")
             break
 
-async def receive_stream(task_id: str):
-    url = f"http://localhost:42069/stream/{task_id}?data_mode=steps"  # Replace with your server's URL
+async def snake_stream():
+    base_uri = "ws://localhost:42069/stream"
+    request_uri = "http://localhost:42069/api/request_run"
+    websocket = None
     render_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
-    count = 0
-    async with httpx.AsyncClient() as client:
-        # Send a GET request to the streaming endpoint
-        async with client.stream("GET", url) as response:
-            if response.status_code != 200:
-                print(f"Failed to connect: {response.status_code}")
-                return
+    data_mode = "steps"
+    data_on_demand = False
+    run_config = {
+        "width": 32,
+        "height": 32,
+        "food": 15,
+        "snake_count": 1,
+        "map": "items"
+    }
+    try:
+        params = {
+            "data_mode": data_mode,
+            "data_on_demand": data_on_demand
+        }
+        response = requests.post(request_uri, json=run_config)
+        run_config = response.json()
+        stream_id = run_config["stream_id"]
+        stream_uri = '/'.join([base_uri, stream_id]) + '?' + urlencode(params)
+        print(f"Stream URI: {stream_uri}")
+        websocket = await websockets.connect(stream_uri)
+        init_data = await websocket.recv()
+        print(init_data)
+        render_conn.send(json.loads(init_data))
+        if data_on_demand:
+            get_data_task = asyncio.create_task(request_data(websocket))
+        while render_p.is_alive():
+            data = await websocket.recv()
+            if data == "END":
+                break
+            print(data)
+            converted_data = json.loads(data)
+            render_conn.send(converted_data)
+            print(f"Data received: {converted_data}")
 
-            # Read each chunk as it arrives
-            async for chunk in response.aiter_bytes():
-                if not chunk:
-                    # End of stream
-                    break
-                try:
-                    render_conn.send(json.loads(chunk))
-                except json.JSONDecodeError:
-                    print(f"Failed to decode chunk: {chunk}")
-                    render_conn.send('stopped')
-                # Here you can process the binary data (chunk) as needed
+    except websockets.exceptions.ConnectionClosed as e:
+        print(f"Connection closed: {e}")
+    except Exception as e:
+        log.error(e)
+        log.debug("TRACE: ", exc_info=True)
+
+    finally:
+        if "get_data_task" in locals():
+            get_data_task.cancel()
+        if websocket is not None:
+            await websocket.close()
+            print("WebSocket closed.")
+    while render_p.is_alive():
+        pass
 
 async def main():
-    task_id = "d3020a82-06a5-437b-9494-9b27c3333c01"
-    task_id = "90bf370e-e75d-4984-b56d-d551c10882a7"
-    await receive_stream(task_id)
-# Run the receive_stream coroutine
-if __name__ == "__main__":
-    asyncio.run(main())
+    await snake_stream()
+
+if __name__ == '__main__':
+    # Run the main function in the asyncio event loop
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Stopped by user")

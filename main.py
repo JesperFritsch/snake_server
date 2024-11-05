@@ -27,6 +27,8 @@ from process_pool import MultiStreamManager
 
 MAX_STREAMS = 5
 
+stream_connections = {}
+
 log = logging.getLogger('main')
 log.setLevel(logging.DEBUG)
 
@@ -64,6 +66,10 @@ class DataStreamHandler:
         self.changes_to_send = 0
         self.yield_time = 0.05
         self.data_buffer = deque()
+        self.init_data = {}
+
+    def set_init_data(self, data):
+        self.init_data = data
 
     def push_data(self, data):
         self.data_buffer.append(data)
@@ -144,61 +150,87 @@ async def request_run(request: Request):
 @app.get("/api/run_info")
 async def get_run_info():
     data = stream_manager.get_current_run_data()
-    print(stream_manager.running_processes)
-    print(stream_manager.run_configs)
     return JSONResponse(content=data)
 
-@app.get("/stream/{stream_id}")
-async def get_stream_data(stream_id: uuid.UUID, data_mode: str = 'pixel_data'):
-    str_stream_id = str(stream_id)
-    if not str_stream_id in stream_manager.stream_buffers:
-        return JSONResponse(content={'error': 'Stream not found'}, status_code=404)
 
-    try_count = 0
-    while try_count < 5:
-        try_count += 1
-        try:
-            stream_buffer = stream_manager.stream_buffers[str_stream_id]
-        except KeyError:
-            asyncio.sleep(0.1)
+@app.websocket("/stream/{stream_id}")
+async def get_stream_data(websocket: WebSocket, stream_id: str):
+    # Maybe some condition to accept or reject the connection
+    await websocket.accept()
+    if not stream_id in stream_manager.stream_buffers:
+        log.error(f"Stream not found: {stream_id}")
+        await websocket.send_json({'error': 'Stream not found'})
+        await websocket.close(code=1003)
+    try:
+        data_mode = websocket.query_params.get('data_mode', 'pixel_data')
+        data_on_demand_str = websocket.query_params.get('data_on_demand', False)
+        data_on_demand = True if data_on_demand_str == 'True' else False
+        stream_init_data = stream_manager.get_stream_init_data(stream_id)
+        try_count = 0
+        while try_count < 5:
+            try_count += 1
+            try:
+                stream_buffer = stream_manager.stream_buffers[stream_id]
+            except KeyError:
+                await asyncio.sleep(0.1)
 
-    start_time = time.time()
-    while len(stream_buffer) == 0 and time.time() - start_time < 5:
-        await asyncio.sleep(0.1)
+        start_time = time.time()
+        while len(stream_buffer) == 0 and time.time() - start_time < 5:
+            await asyncio.sleep(0.1)
 
-    # If no data is available, return 501
-    if len(stream_buffer) == 0:
-        return JSONResponse(content={'error': 'Something went wrong on the server'}, status_code=501)
+        # If no data is available, return 501
+        if len(stream_buffer) == 0:
+            await websocket.send_json({'error': 'Something went wrong on the server'})
+            await websocket.close(code=1011)
 
-    if data_mode == 'pixel_data':
-        frame_builder = FrameBuilder(run_meta_data=stream_buffer[0], expand_factor=2, offset=(1, 1))
-    else:
-        frame_builder = None
+        if data_mode == 'pixel_data':
+            frame_builder = FrameBuilder(run_meta_data=stream_init_data, expand_factor=2, offset=(1, 1))
+        else:
+            frame_builder = None
 
-    def stream_generator(frame_builder=frame_builder, data_mode=data_mode, stream_buffer=stream_buffer):
-        msg_count = 0
+        # first send the init data
+        await websocket.send_json(stream_init_data)
+
+        # Use the streamhandler so that the client can chose how often and how much data is sent
+        data_stream = DataStreamHandler(websocket, data_mode, data_on_demand)
+        data_stream_task = asyncio.create_task(data_stream.handler())
+        step_count = 0
         while True:
             try:
-                if msg_count < len(stream_buffer):
-                    if data_mode == 'steps':
-                        data = stream_buffer[msg_count]
-                        msg_count += 1
-                        yield json.dumps(data)
-                    else:
-                        changes = frame_builder.step_to_pixel_changes(stream_buffer[msg_count])
-                        for change in changes:
-                            flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
-                            payload = bytes(flattened_payload)
-                            msg_count += 1
-                            yield payload
-            except WebSocketDisconnect:
+                if step_count >= len(stream_buffer):
+                    await asyncio.sleep(0.1)
+                    continue
+                data = stream_buffer[step_count]
+                step_count += 1
+                if data == 'stopped':
+                    break
+                if data_mode == 'steps':
+                    data_stream.push_data(data)
+                elif data_mode == 'pixel_data':
+                    changes = frame_builder.step_to_pixel_changes(data)
+                    for change in changes:
+                        flattened_payload = [value for sublist in change for sublist_pair in sublist for value in sublist_pair]
+                        payload = bytes(flattened_payload)
+                        data_stream.push_data(payload)
+            except EOFError:
                 break
-    media_type = 'application/octet-stream' if data_mode == 'pixel_data' else 'application/json'
-    return StreamingResponse(stream_generator(
-        frame_builder=frame_builder,
-        data_mode=data_mode,
-        stream_buffer=stream_buffer
-    ), media_type=media_type)
+        data_stream.data_end = True
+        await data_stream_task
+    except WebSocketDisconnect as e:
+        log.info(f"Connection closed by client")
+        try:
+            data_stream_task.cancel()
+        except:
+            pass
+
+    except Exception as e:
+        log.error(e)
+        log.debug(f"TRACEBACK: ", exc_info=True)
+
+    finally:
+        if websocket.application_state == WebSocketState.CONNECTED and websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_text('END')
+            await websocket.close()
 
 
 @app.websocket("/ws")

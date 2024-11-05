@@ -30,6 +30,7 @@ class MultiStreamManager:
         self.running_processes = {}
         self.stream_buffers = {} # the buffers will contain the steps from the simulation
         self.run_configs = {}
+        self.run_init_data = {}
 
     def can_start_new_stream(self):
         return len(self.running_processes) < MAX_STREAMS
@@ -41,6 +42,7 @@ class MultiStreamManager:
             del self.running_processes[stream_id]
             del self.stream_buffers[stream_id]
             del self.run_configs[stream_id]
+            del self.run_init_data[stream_id]
             return True
         return False
 
@@ -57,6 +59,9 @@ class MultiStreamManager:
             }
         return data
 
+    def get_stream_init_data(self, stream_id: str):
+        return self.run_init_data.get(stream_id)
+
     def start_stream(self, config: DotDict):
         if self.can_start_new_stream():
             stream_id = str(uuid.uuid4())
@@ -71,6 +76,10 @@ class MultiStreamManager:
         process = RunningProcess(stream_id, future)
         self.running_processes[stream_id] = process
         self.run_configs[stream_id] = config
+        while not pipe_conn.poll():
+            await asyncio.sleep(0.05)
+        init_data = pipe_conn.recv()
+        self.run_init_data[stream_id] = init_data
         while True:
             start_time = time.time()
             while pipe_conn.poll() and time.time() - start_time < 0.05:
