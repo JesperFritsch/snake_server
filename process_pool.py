@@ -1,7 +1,7 @@
 import uuid
 import asyncio
 import time
-from typing import Optional
+from typing import Optional, Dict
 from concurrent.futures import ProcessPoolExecutor, Future
 from multiprocessing import Pipe
 
@@ -31,6 +31,7 @@ class MultiStreamManager:
         self.stream_buffers = {} # the buffers will contain the steps from the simulation
         self.run_configs = {}
         self.run_init_data = {}
+        self.ready_events: Dict[str, asyncio.Event] = {}
 
     def can_start_new_stream(self):
         return len(self.running_processes) < MAX_STREAMS
@@ -43,6 +44,7 @@ class MultiStreamManager:
             del self.stream_buffers[stream_id]
             del self.run_configs[stream_id]
             del self.run_init_data[stream_id]
+            del self.ready_events[stream_id]
             return True
         return False
 
@@ -65,6 +67,7 @@ class MultiStreamManager:
     def start_stream(self, config: DotDict):
         if self.can_start_new_stream():
             stream_id = str(uuid.uuid4())
+            self.ready_events[stream_id] = asyncio.Event()
             asyncio.create_task(self._start_stream(stream_id, config))
             return stream_id
         return None
@@ -80,6 +83,7 @@ class MultiStreamManager:
             await asyncio.sleep(0.05)
         init_data = pipe_conn.recv()
         self.run_init_data[stream_id] = init_data
+        self.ready_events[stream_id].set()
         while True:
             start_time = time.time()
             while pipe_conn.poll() and time.time() - start_time < 0.05:

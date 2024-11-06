@@ -12,19 +12,19 @@ from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.websockets import WebSocketState
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from multiprocessing import Pipe, Process, Queue, get_context
-from collections import deque
 
 from snake_sim.snake_env import SnakeEnv
 from snake_sim.render.core import FrameBuilder
-from snake_sim.snakes.auto_snake import AutoSnake
-from snake_sim.main import start_stream_run, start_game_run
+from snake_sim.main import start_stream_run
 from snake_sim.utils import DotDict
 from snake_sim.render.core import FrameBuilder
 
 from process_pool import MultiStreamManager
+from data_stream_handler import DataStreamHandler
 
 MAX_STREAMS = 5
 
@@ -51,66 +51,18 @@ app = FastAPI()
 
 stream_manager = MultiStreamManager()
 
+app.mount("/client", StaticFiles(directory="client"), name="client")
+
 def get_default_config():
     config_json = pkg_resources.resource_filename('snake_sim', 'config/default_config.json')
     with open(config_json, 'r') as f:
         default_config = json.load(f)
     return DotDict(default_config)
 
-
-class DataStreamHandler:
-    def __init__(self, websocket: WebSocket, data_mode: str, on_demand: bool):
-        self.data_mode = data_mode
-        self.websocket = websocket
-        self.on_demand = on_demand
-        self.data_end = False
-        self.changes_to_send = 0
-        self.yield_time = 0.05
-        self.data_buffer = deque()
-        self.init_data = {}
-
-    def set_init_data(self, data):
-        self.init_data = data
-
-    def push_data(self, data):
-        self.data_buffer.append(data)
-
-    async def handler(self):
-        try:
-            while not self.data_end or len(self.data_buffer) > 0:
-                if self.on_demand:
-                    try:
-                        req = await asyncio.wait_for(self.websocket.receive_text(), timeout=self.yield_time)
-                        get, nr = req.split(' ')
-                        nr_changes = int(nr)
-                        log.debug(f"Requested {nr_changes} changes")
-                        log.debug(f"Changes buffer size: {len(self.data_buffer)}")
-                        self.changes_to_send += nr_changes
-                        log.debug(f"Changes to send: {self.changes_to_send}")
-                    except asyncio.TimeoutError:
-                        pass
-                else:
-                    self.changes_to_send = len(self.data_buffer)
-                    await asyncio.sleep(self.yield_time)
-                count = 0
-                while count < self.changes_to_send:
-                    count += 1
-                    if len(self.data_buffer) > 0:
-                        data = self.data_buffer.popleft()
-                        if self.data_mode == 'steps':
-                            await self.websocket.send_json(data)
-                        elif self.data_mode == 'pixel_data':
-                            await self.websocket.send_bytes(data)
-                        self.changes_to_send -= 1
-        except WebSocketDisconnect:
-            raise
-        except Exception as e:
-            log.error(e)
-            return
-
-async def nonblock_exec(func, *args):
-    return await asyncio.to_thread(func, *args)
-
+@app.get("/")
+async def root():
+    file_path = "client/index.html"
+    return FileResponse(file_path)
 
 @app.get("/api/config_data")
 async def get_config_data(conf: List[str] = Query([])):
@@ -162,28 +114,20 @@ async def get_stream_data(websocket: WebSocket, stream_id: str):
         log.error(f"Stream not found: {stream_id}")
         await websocket.send_json({'error': 'Stream not found'})
         await websocket.close(code=1003)
+        return
     try:
+        ready_event = stream_manager.ready_events.get(stream_id)
+        try:
+            await asyncio.wait_for(ready_event.wait(), timeout=5)
+        except asyncio.TimeoutError:
+            await websocket.send_json({'error': 'Stream not ready'})
+            await websocket.close(code=1003)
+            return
         data_mode = websocket.query_params.get('data_mode', 'pixel_data')
         data_on_demand_str = websocket.query_params.get('data_on_demand', False)
         data_on_demand = True if data_on_demand_str == 'True' else False
         stream_init_data = stream_manager.get_stream_init_data(stream_id)
-        try_count = 0
-        while try_count < 5:
-            try_count += 1
-            try:
-                stream_buffer = stream_manager.stream_buffers[stream_id]
-            except KeyError:
-                await asyncio.sleep(0.1)
-
-        start_time = time.time()
-        while len(stream_buffer) == 0 and time.time() - start_time < 5:
-            await asyncio.sleep(0.1)
-
-        # If no data is available, return 501
-        if len(stream_buffer) == 0:
-            await websocket.send_json({'error': 'Something went wrong on the server'})
-            await websocket.close(code=1011)
-
+        stream_buffer = stream_manager.stream_buffers[stream_id]
         if data_mode == 'pixel_data':
             frame_builder = FrameBuilder(run_meta_data=stream_init_data, expand_factor=2, offset=(1, 1))
         else:
