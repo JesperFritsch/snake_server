@@ -7,6 +7,7 @@ import asyncio
 import logging
 import pkg_resources
 
+from typing import List
 from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
@@ -112,7 +113,7 @@ async def nonblock_exec(func, *args):
 
 
 @app.get("/api/config_data")
-async def get_config_data(conf: list[str] = Query([])):
+async def get_config_data(conf: List[str] = Query([])):
     unhandled = conf.copy()
     resp = {}
     if 'maps' in conf:
@@ -303,6 +304,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except Exception as e:
         log.error(e)
+        log.debug("TRACEBACK", exc_info=True)
 
     finally:
         if websocket.application_state == WebSocketState.CONNECTED and websocket.client_state == WebSocketState.CONNECTED:
