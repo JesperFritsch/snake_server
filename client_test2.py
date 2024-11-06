@@ -30,7 +30,7 @@ async def snake_stream():
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
     data_mode = "steps"
-    data_on_demand = False
+    data_on_demand = True
     run_config = {
         "width": 32,
         "height": 32,
