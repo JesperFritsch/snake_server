@@ -1,12 +1,14 @@
 
 const domain = `localhost:42069`;
 
+
 const basic_config = {
     grid_width: 64,
     grid_height: 64,
     food: 50,
-    snake_count: 1,
-    map: "sign"
+    food_decay: 0,
+    snake_count: 2,
+    map: "sign",
 };
 
 function blobToArrayBuffer(blob) {
@@ -102,22 +104,18 @@ class CanvasHandler {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    reset_stream_handler(host_domain) {
+    async reset_stream_handler(host_domain) {
         if (this.stream_handler) {
             this.stream_handler.reset();
         }
         this.stream_handler = new StreamHandler(host_domain);
         this.stream_handler.on_init_data = this.init.bind(this);
         this.stream_handler.set_msg_handler(this.frame_handler.add_frame.bind(this.frame_handler));
-    }
-
-    start_stream(stream_id) {
-        this.reset_stream_handler(domain);
-        this.stream_handler.join_stream(stream_id);
-        this.run();
+        await this.stream_handler.protobuf_initialized;
     }
 
     init(init_data){
+        console.log("DRGSEREGAESRGAERGAERGAERGAERGAER");
         this.frame_handler.init(init_data.width * 2, init_data.height * 2, 1, 1, 0, 0);
         this.canvas.width = this.frame_handler.total_width;
         this.canvas.height = this.frame_handler.total_height;
@@ -126,25 +124,25 @@ class CanvasHandler {
         let directions = [[1,0], [0,1], [-1,0], [0,-1]];
         const offset_x = this.frame_handler.content_offset_x;
         const offset_y = this.frame_handler.content_offset_y;
-        const free_tile_color = init_data.color_mapping[1];
+        const free_tile_color = init_data.colorMapping[1];
         const base_map_frame = new Uint8ClampedArray(frame_width * frame_height * 4);
         // Fill the base map with the free tile color
         for (let i = 0; i < base_map_frame.length; i += 4) {
             for (let j = 0; j < 3; j++) {
-                base_map_frame[i + j] = free_tile_color[j];
+                base_map_frame[i + j] = Object.values(free_tile_color)[j];
             }
             base_map_frame[i + 3] = 255;
         }
-        for(let y = 0; y < init_data.base_map.length; y++){
-            for(let x = 0; x < init_data.base_map[y].length; x++){
+        for(let y = 0; y < init_data.baseMap.length; y++){
+            for(let x = 0; x < init_data.baseMap[y].length; x++){
                 const pixel_color = [0, 0, 0, 255];
                 const expanded_coord = [(x*2) + offset_x, (y*2) + offset_y];
                 const coord = [x, y];
-                const tile_value = init_data.base_map[y][x];
-                const color = init_data.color_mapping[tile_value];
-                for (const i in color) {
-                    pixel_color[i] = color[i];
-                }
+                const tile_value = init_data.baseMap[y][x];
+                const color = init_data.colorMapping[tile_value];
+                Object.values(color).forEach((c, i) => {
+                    pixel_color[i] = c;
+                });
                 let pixel_index = (expanded_coord[1] * frame_width + expanded_coord[0]) * 4;
                 // write the pixel color to the base map frame
                 for (let i = 0; i < 4; i++) {
@@ -153,9 +151,9 @@ class CanvasHandler {
                 for(let dir of directions){
                     let new_expanded_coord = [expanded_coord[0] + dir[0], expanded_coord[1] + dir[1]];
                     let new_coord = [coord[0] + dir[0], coord[1] + dir[1]];
-                    if(new_coord[0] >= 0 && new_coord[0] < init_data.base_map[y].length && new_coord[1] >= 0 && new_coord[1] < init_data.base_map.length){
-                        if(init_data.base_map[new_coord[1]][new_coord[0]] === tile_value){
-                            const color = init_data.color_mapping[tile_value];
+                    if(new_coord[0] >= 0 && new_coord[0] < init_data.baseMap[y].length && new_coord[1] >= 0 && new_coord[1] < init_data.baseMap.length){
+                        if(init_data.baseMap[new_coord[1]][new_coord[0]] === tile_value){
+                            const color = init_data.colorMapping[tile_value];
                             for (const i in color) {
                                 pixel_color[i] = color[i];
                             }
@@ -177,6 +175,7 @@ class CanvasHandler {
     }
 
     run() {
+        console.log("Running");
         this.interval_id = setInterval(() => {
             if (this.frame_index < this.frame_handler.frame_images.length) {
                 this.show_frame(this.frame_handler.frame_images[this.frame_index]);
@@ -199,14 +198,33 @@ class StreamHandler {
         this.data_on_demain = false;
         this.init_data = null;
         this.on_init_data = null; // callback
+        this.on_pixel_data = null; // callback
         this.got_init_data = false;
         this.ws = null;
         this.host_domain = host_domain;
+        this.step_data_pb = null;
+        this.proto_root = null;
+        this.protobuf_initialized = this.init_protobuf();
+    }
+
+    async init_protobuf(){
+        try{
+            return protobuf.load("/static/sim_msgs.proto", (err, root) => {
+                if (err) {
+                    throw err;
+                }
+                this.proto_root = root;
+            });
+        }
+        catch{
+            console.log("Error loading protobuf");
+        }
     }
 
     reset() {
         this.got_init_data = false;
         this.init_data = null;
+        this.step_data_pb = null;
         if (this.ws) {
             this.ws.close();
         }
@@ -231,7 +249,7 @@ class StreamHandler {
     }
 
     join_stream(stream_id){
-        const stream_url = `http://${this.host_domain}/stream/${stream_id}`; 
+        const stream_url = `http://${this.host_domain}/stream/${stream_id}`;
         const url = new URL(stream_url);
         url.searchParams.append("data_on_demand", this.data_on_demain);
         url.searchParams.append("data_mode", this.data_mode);
@@ -242,21 +260,69 @@ class StreamHandler {
 
     msg_reciever(message) {
         if (!this.got_init_data) {
-            this.got_init_data = true;
-            const init_data = JSON.parse(message.data);
-            this.on_init_data(init_data);
+            this._process_msg(message.data);
+            // this.got_init_data = true;
+            // const init_data = JSON.parse(message.data);
+            // console.log(init_data);
+            // this.on_init_data(init_data);
         }
         else {
-            // console.log(message.data);
             const data = message.data;
-            const view = new DataView(data);
-            const pixels = [];
-            for (let i = 0; i < view.byteLength; i += 5) {
-                const coord = [view.getUint8(i), view.getUint8(i + 1)];
-                const color = [view.getUint8(i + 2), view.getUint8(i + 3), view.getUint8(i + 4)];
-                pixels.push([coord, color]);
-            }
-            this.msg_handler(pixels);
+
+            const pixel_changes = this._process_msg(data);
+            // const view = new DataView(data);
+            // const pixels = [];
+            // for (let i = 0; i < view.byteLength; i += 5) {
+            //     const coord = [view.getUint8(i), view.getUint8(i + 1)];
+            //     const color = [view.getUint8(i + 2), view.getUint8(i + 3), view.getUint8(i + 4)];
+            //     pixels.push([coord, color]);
+            // }
+
+            this.msg_handler(pixel_changes);
+        }
+    }
+
+    _process_msg(data) {
+        const MSG_TYPE = this.proto_root.lookupEnum("snakesim.MessageType");
+        const msg_wrapper = this.proto_root.lookupType("snakesim.MsgWrapper");
+        const message = msg_wrapper.decode(new Uint8Array(data));
+        if (message.type == MSG_TYPE.values.PIXEL_CHANGES){
+            let pixel_changes_type = this.proto_root.lookupType("snakesim.PixelChanges");
+            let pixel_changes_proto = pixel_changes_type.decode(message.payload);
+            let pixel_changes = pixel_changes_type.toObject(pixel_changes_proto, {
+                defaults: true,
+            });
+
+            const pixel_changes_data = [];
+            pixel_changes.pixels.forEach(pxl_data => {
+                pixel_changes_data.push([
+                    [
+                        pxl_data.coord.x,
+                        pxl_data.coord.y
+                    ],
+                    [
+                        pxl_data.color.r,
+                        pxl_data.color.g,
+                        pxl_data.color.b
+                    ]]);
+            });
+            return pixel_changes_data;
+            // this.msg_handler(pixel_changes_data);
+        }
+        else if (message.type == MSG_TYPE.values.RUN_META_DATA){
+            let run_meta_data_type = this.proto_root.lookupType("snakesim.RunMetaData");
+            let run_meta_data_proto = run_meta_data_type.decode(message.payload);
+            let run_meta_data = run_meta_data_type.toObject(run_meta_data_proto, {
+                defaults: true,
+            });
+            console.log(run_meta_data);
+            run_meta_data.baseMap = unflattenArray(run_meta_data.baseMap, run_meta_data.width);
+            console.log(run_meta_data);
+            this.on_init_data(run_meta_data);
+        }
+        else{
+            console.log("Unknown message type");
+
         }
     }
 
@@ -304,11 +370,23 @@ async function start_stream_event(event) {
     const current_step = run_info[stream_id].steps;
     canvas_handler.frame_index = current_step * 2;
     canvas_handler.frame_handler.clear();
-    canvas_handler.reset_stream_handler(domain);
+    await canvas_handler.reset_stream_handler(domain);
     canvas_handler.stream_handler.join_stream(stream_id);
     canvas_handler.run();
 }
 
+
+function unflattenArray(arr, width) {
+    if (width <= 0) throw new Error("Width must be greater than 0");
+    const height = Math.ceil(arr.length / width);
+    const result = new Array(height);
+
+    for (let i = 0; i < height; i++) {
+        result[i] = arr.slice(i * width, (i + 1) * width);
+    }
+
+    return result;
+}
 
 const canvas_handler = new CanvasHandler();
 document.addEventListener('DOMContentLoaded', () =>{
