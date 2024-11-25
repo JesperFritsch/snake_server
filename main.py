@@ -14,16 +14,12 @@ from typing import List
 from logging.handlers import RotatingFileHandler
 from importlib.resources import files
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
-from fastapi.websockets import WebSocketState
+from fastapi import FastAPI, WebSocket, Query, Request
+from fastapi.websockets import WebSocketDisconnect, WebSocketState
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from multiprocessing import Pipe, Process, Queue, get_context
-
 from snake_sim.snake_env import SnakeEnv
-from snake_sim.render.core import FrameBuilder
-from snake_sim.main import start_stream_run
 from snake_sim.utils import DotDict
 
 from process_pool import MultiStreamManager
@@ -35,7 +31,7 @@ stream_connections = {}
 
 
 log = logging.getLogger('main')
-log.setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -61,7 +57,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        log.info("Shutting down")
+        log.info("life span cleanup")
         await task_manager.cancel_all()
         stream_manager.cleanup()
 
@@ -100,7 +96,7 @@ async def get_config_data(conf: List[str] = Query([])):
 @app.get("/api/stop_stream")
 async def stop_stream(stream_id: uuid.UUID):
     str_stream_id = str(stream_id)
-    print(f"Stopping stream: {str_stream_id}")
+    log.debug(f"Stopping stream: {str_stream_id}")
     stopped = stream_manager.stop_stream(str_stream_id)
     if stopped:
         return JSONResponse(content={'status': 'stopped'})
@@ -121,7 +117,7 @@ async def request_run(request: Request):
 
 @app.get("/api/run_info")
 async def get_run_info():
-    data = stream_manager.get_current_run_data()
+    data = stream_manager.get_current_run_info()
     return JSONResponse(content=data)
 
 
@@ -131,35 +127,30 @@ async def get_stream_data(websocket: WebSocket, stream_id: str):
     await websocket.accept()
     if not stream_manager.is_running(stream_id):
         log.error(f"Stream not found: {stream_id}")
-        await websocket.send_json({'error': 'Stream not found'})
+        # await websocket.send_json({'error': 'Stream not found'})
         await websocket.close(code=1003)
         return
     try:
         if not await stream_manager.wait_for_ready(stream_id, timeout=5):
-            await websocket.send_json({'error': 'Stream not ready'})
+            # await websocket.send_json({'error': 'Stream not ready'})
+            log.error(f"Stream not ready: {stream_id}")
             await websocket.close(code=1003)
             return
-        data_mode = websocket.query_params.get('data_mode', 'pixel_data')
-        data_on_demand_str = websocket.query_params.get('data_on_demand', False)
-        data_on_demand = True if data_on_demand_str == 'True' else False
         # Use the streamhandler so that the client can chose how often and how much data is sent
-        data_stream = DataStreamHandler(websocket, data_mode, data_on_demand, stream_id)
-        data_stream_task = asyncio.create_task(data_stream.handler())
+        data_stream = DataStreamHandler(websocket, stream_id)
+        data_stream_task = asyncio.create_task(data_stream.start())
         task_manager.add_task(data_stream_task)
         await data_stream_task
 
     except WebSocketDisconnect as e:
         log.info(f"Connection closed by client")
-        try:
-            data_stream_task.cancel()
-        except:
-            pass
 
     except Exception as e:
         log.error(e)
         log.debug(f"TRACEBACK: ", exc_info=True)
 
     finally:
-        if websocket.application_state == WebSocketState.CONNECTED and websocket.client_state == WebSocketState.CONNECTED:
-            await websocket.send_text('END')
+        await data_stream.cancel()
+        data_stream_task.cancel()
+        if websocket.client_state == WebSocketState.CONNECTED and websocket.application_state == WebSocketState.CONNECTED:
             await websocket.close()

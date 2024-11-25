@@ -46,7 +46,7 @@ class MultiStreamManager(metaclass=SingletonMeta):
     def can_start_new_stream(self):
         return len(self.running_processes) < MAX_STREAMS
 
-    def is_running(self, stream_id: uuid.UUID):
+    def is_running(self, stream_id: str):
         return stream_id in self.running_processes
 
     async def wait_for_ready(self, stream_id: uuid.UUID, timeout: Optional[float] = None):
@@ -64,7 +64,7 @@ class MultiStreamManager(metaclass=SingletonMeta):
             stream_proc.cancel()
         self.process_pool.shutdown()
 
-    def stop_stream(self, stream_id: uuid.UUID):
+    def stop_stream(self, stream_id: str):
         if stream_id in self.running_processes:
             process = self.running_processes[stream_id]
             process.cancel()
@@ -76,7 +76,7 @@ class MultiStreamManager(metaclass=SingletonMeta):
             return True
         return False
 
-    def get_current_run_data(self, stream_id: Optional[str] = None):
+    def get_current_run_info(self, stream_id: Optional[str] = None):
         if stream_id:
             streams = [stream_id]
         else:
@@ -118,8 +118,10 @@ class MultiStreamManager(metaclass=SingletonMeta):
         while True:
             start_time = time.time()
             while pipe_conn.poll() and time.time() - start_time < 0.05:
-                step_dict = pipe_conn.recv()
-                step_obj = StepData.from_dict(step_dict)
+                data = pipe_conn.recv()
+                if isinstance(data, str):
+                    break
+                step_obj = StepData.from_dict(data)
                 self.step_buffers[stream_id].append(step_obj)
             await asyncio.sleep(0.05)
             if process.is_done():

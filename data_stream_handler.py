@@ -1,89 +1,146 @@
 
 import asyncio
 import logging
+
+from typing import Deque, List, Optional, Union
 from collections import deque
 from fastapi import WebSocket
-from fastapi.websockets import WebSocketDisconnect
+from fastapi.websockets import WebSocketDisconnect, WebSocketState
+from google.protobuf.json_format import MessageToDict
+from google.protobuf.message import Message
 
 from process_pool import MultiStreamManager
-
-from snake_sim.render.core import FrameBuilder
+from snake_sim.render.core import FrameBuilder, OutOfSyncError
 from snake_sim.snake_env import StepData, RunData
-from snake_sim.protobuf.python.sim_msgs_pb2 import MsgWrapper, PixelChanges, RunMetaData, MessageType
+from snake_sim.protobuf.sim_msgs_pb2 import (
+    MsgWrapper,
+    PixelChanges,
+    RunMetaData,
+    MessageType,
+    Request,
+    RequestType,
+    RequestAck,
+    StepData as proto_step_data,
+    StepDataRequest,
+    PixelChangesRequest,
+    RunMetaDataRequest
+    )
 
 log = logging.getLogger(__name__)
 
 stream_manager = MultiStreamManager()
 
+
+def create_pixel_change_proto_msg(change, full_state: Optional[bool] = False) -> MsgWrapper:
+    payload = PixelChanges()
+    payload.full_state = full_state
+    for (x, y), color in change:
+        pixel = payload.pixels.add()
+        pixel.coord.x = x
+        pixel.coord.y = y
+        pixel.color.r = color[0]
+        pixel.color.g = color[1]
+        pixel.color.b = color[2]
+    wrapper_msg = MsgWrapper(
+        type=MessageType.PIXEL_CHANGES,
+        payload=payload.SerializeToString()
+    )
+    return wrapper_msg
+
+
 class DataStreamHandler:
-    def __init__(self, websocket: WebSocket, data_mode: str, on_demand: bool, stream_id: str):
-        self.data_mode = data_mode
+    def __init__(self, websocket: WebSocket, stream_id: str):
         self.stream_id = stream_id
         self.websocket = websocket
-        self.on_demand = on_demand
-        self.step_buffer = stream_manager.step_buffers.get(stream_id, None)
-        self.data_end = False
-        self.steps_sent = 0
-        self.steps_requested = 0
-        self.range_requested = {}
-        self.yield_time = 0.05
-        self.init_data = {}
+        self.step_buffer: List[StepData] = stream_manager.step_buffers.get(stream_id, None)
+        self.yield_time = 0.01
         self.frame_builder = None
+        self.init_frame_builder()
+        self.unhandled_requests: Deque[Request] = deque()
+        self.msg_out_buffer: Deque[Message] = deque()
+        self.sub_tasks = set()
 
-    def set_init_data(self, data):
-        self.init_data = data
+    async def async_ws_wrapper(self, coroutine, *args, **kwargs):
+        try:
+            return await coroutine(*args, **kwargs)
+        except WebSocketDisconnect:
+            log.error(f"Websocket disconnected for stream: {self.stream_id}")
+            await self.cancel()
+            raise
+        except Exception as e:
+            log.error(e)
+            log.debug("TRACEBACK", exc_info=True)
+            raise e
 
     def init_frame_builder(self):
         meta_data = stream_manager.run_meta_datas.get(self.stream_id)
         self.frame_builder = FrameBuilder(run_meta_data=meta_data, expand_factor=2, offset=(1, 1))
 
-    def parse_request(self, req: dict):
-        mode = req.get('mode')
-        if mode == 'sequential':
-            nr = req.get('nr')
-            nr_steps = int(nr)
-            log.debug(f"Requested {nr_steps} steps")
-            self.steps_requested = nr_steps
-            log.debug(f"Steps to send: {self.steps_requested}")
-        elif mode == 'indexed':
-            start, end = map(int, req.get('range').split('-'))
-            if end < start:
-                log.debug(f"Invalid range: {start}-{end} - end is smaller than start")
-                return
-            log.debug(f"Requested range: {start}-{end}")
-            self.range_requested = {'start': start, 'end': end}
+    def split_request(self, req: Request):
+        # Split the request into two requests, one for the last available step and one for the rest
+        req_type = req.type
+        req_payload = req.payload
+        if req_type == RequestType.STEP_DATA_REQ:
+            orig_req = StepDataRequest()
+            orig_req.ParseFromString(req_payload)
+            new_req_payload = StepDataRequest()
+        elif req_type == RequestType.PIXEL_CHANGES_REQ:
+            orig_req = PixelChangesRequest()
+            orig_req.ParseFromString(req_payload)
+            new_req_payload = PixelChangesRequest()
+        new_req_payload.CopyFrom(orig_req)
+        last_available_step = self.get_last_available_step()
+        orig_req.end_step = last_available_step
+        new_req_payload.start_step = last_available_step + 1
+        self.unhandled_requests.append(new_req_payload)
+        return orig_req
 
-    def create_proto_msgs(self, step_data):
-        msgs = []
-        if self.data_mode == 'steps':
-            step_proto = step_data.to_protobuf()
+    def get_last_available_step(self):
+        return self.step_buffer[-1].step
+
+    def check_last_step(self, step_nr: int):
+        return step_nr == self.step_buffer[-1].step and not stream_manager.is_running(self.stream_id)
+
+    def handle_pixel_changes_request(self, req: PixelChangesRequest):
+        if req.end_step > self.step_buffer[-1].step:
+            # if the full request is not available, split it into two requests, handle the other one later
+            req = self.split_request(req)
+        start_step = max(0, req.start_step)
+        end_step = req.end_step
+        if end_step < start_step:
+            raise ValueError(f"End step '{end_step}' should be greater than start step '{start_step}'")
+        steps = self.step_buffer[start_step-1:end_step]
+        if self.frame_builder.last_handled_step != start_step - 1:
+            full_state_change = self.frame_builder.full_step_to_pixel_data(self.step_buffer[start_step - 1].to_dict(full_state=True))
+            msg = create_pixel_change_proto_msg(full_state_change, full_state=True)
+            self.add_msg_to_buffer(msg)
+            steps = steps[1:]
+        for step in steps:
+            changes = self.frame_builder.step_to_pixel_changes(step.to_dict())
+            for change in changes:
+                msg = create_pixel_change_proto_msg(change)
+                self.add_msg_to_buffer(msg)
+
+    def handle_step_data_request(self, req: StepDataRequest):
+        if req.end_step > self.step_buffer[-1].step:
+            # if the full request is not available, split it into two requests, handle the other one later
+            req = self.split_request(req)
+        start_step = max(0, req.start_step)
+        end_step = req.end_step
+        if end_step < start_step:
+            raise ValueError(f"End step '{end_step}' should be greater than start step '{start_step}'")
+        steps = self.step_buffer[start_step-1:end_step]
+        for step in steps:
+            step_proto = step.to_protobuf(req.full_state)
             wrapper_msg = MsgWrapper(
                 type=MessageType.STEP_DATA,
                 payload=step_proto.SerializeToString()
             )
-            msgs.append(wrapper_msg)
-        elif self.data_mode == 'pixel_data':
-            changes = self.frame_builder.step_to_pixel_changes(step_data.to_dict())
-            msgs = []
-            for change in changes:
-                payload = PixelChanges()
-                for (x, y), color in change:
-                    pixel = payload.pixels.add()
-                    pixel.coord.x = x
-                    pixel.coord.y = y
-                    pixel.color.r = color[0]
-                    pixel.color.g = color[1]
-                    pixel.color.b = color[2]
-                wrapper_msg = MsgWrapper(
-                    type=MessageType.PIXEL_CHANGES,
-                    payload=payload.SerializeToString()
-                )
-                msgs.append(wrapper_msg)
-        return msgs
+            self.add_msg_to_buffer(wrapper_msg)
 
-    def create_meta_data_proto(self):
+    def handle_run_meta_data_request(self):
+        log.debug(f"Handling run metadata request for stream: {self.stream_id}")
         run_meta_data = stream_manager.get_meta_data(self.stream_id)
-        print(run_meta_data)
         if not run_meta_data:
             log.error(f"Run metadata not found for stream: {self.stream_id}")
             return
@@ -91,54 +148,135 @@ class DataStreamHandler:
         run_data = RunData.from_dict(run_meta_data)
         run_data_proto = run_data.to_protobuf()
         run_meta_data_proto = run_data_proto.run_meta_data
-        return run_meta_data_proto
-
-    async def handler(self):
-        if self.data_mode == 'pixel_data':
-            self.init_frame_builder()
-        run_meta_data_proto = self.create_meta_data_proto()
         wrapper_msg = MsgWrapper(
             type=MessageType.RUN_META_DATA,
             payload=run_meta_data_proto.SerializeToString()
         )
-        # Send the run metadata as the first message
-        await self.websocket.send_bytes(wrapper_msg.SerializeToString())
+        self.add_msg_to_buffer(wrapper_msg)
 
+    def process_request(self, req: Union[StepDataRequest, PixelChangesRequest, RunMetaDataRequest]):
+        log.debug(f"Processing request: {MessageToDict(req)}")
         try:
-            while not self.data_end:
-                if self.on_demand:
-                    try:
-                        req = await asyncio.wait_for(self.websocket.receive_json(), timeout=self.yield_time)
-                        self.parse_request(req)
-                    except asyncio.TimeoutError:
-                        pass
-                else:
-                    self.steps_requested = len(self.step_buffer)
-                    await asyncio.sleep(self.yield_time)
-                while self.steps_requested or self.range_requested:
-                    if self.steps_requested:
-                        next_step = self.steps_sent + 1
-                        if next_step < len(self.step_buffer):
-                            step_data: StepData = self.step_buffer[next_step]
-                            messages = self.create_proto_msgs(step_data)
-                            for msg in messages:
-                                await self.websocket.send_bytes(msg.SerializeToString())
-                            self.steps_requested -= 1
-                            self.steps_sent = next_step
-                        elif not self.data_end:
-                            await asyncio.sleep(self.yield_time)
-                    elif self.range_requested:
-                        start = self.range_requested.get('start')
-                        end = self.range_requested.get('end')
-                        start, end = map(lambda x: min(max(x, 0), (len(self.step_buffer))), (start, end))
-                        for i in range(start, end):
-                            step_data = self.step_buffer[i]
-                            messages = self.create_proto_msgs(step_data)
-                            for msg in messages:
-                                await self.websocket.send_bytes(msg.SerializeToString())
-                        self.range_requested = {}
-
-        except Exception as e:
+            ack = RequestAck()
+            if isinstance(req, StepDataRequest):
+                self.handle_step_data_request(req)
+                ack.type = RequestType.STEP_DATA_REQ
+            elif isinstance(req, PixelChangesRequest):
+                self.handle_pixel_changes_request(req)
+                ack.type = RequestType.PIXEL_CHANGES_REQ
+            elif isinstance(req, RunMetaDataRequest):
+                self.handle_run_meta_data_request()
+            else:
+                log.error(f"Unknown request: {req}")
+            ack.payload = req.SerializeToString()
+            # self.add_msg_to_buffer(ack, priority=True)
+        except ValueError as e:
             log.error(e)
             log.debug("TRACEBACK", exc_info=True)
-            return
+
+    def recieve_request(self, req: Request):
+        req_obj = Request()
+        req_obj.ParseFromString(req)
+        req_type = req_obj.type
+        req_payload = req_obj.payload
+        if req_type == RequestType.STEP_DATA_REQ:
+            step_req = StepDataRequest()
+            step_req.ParseFromString(req_payload)
+            self.unhandled_requests.append(step_req)
+        elif req_type == RequestType.PIXEL_CHANGES_REQ:
+            pixel_req = PixelChangesRequest()
+            pixel_req.ParseFromString(req_payload)
+            self.unhandled_requests.append(pixel_req)
+        elif req_type == RequestType.RUN_META_DATA_REQ:
+            meta_req = RunMetaDataRequest()
+            meta_req.ParseFromString(req_payload)
+            self.unhandled_requests.append(meta_req)
+        else:
+            log.error(f"Unknown request type: {req_type}")
+        log.debug(f"Request received: {req_obj}")
+
+    def add_msg_to_buffer(self, msg: Message, priority: bool = False):
+        if priority:
+            self.msg_out_buffer.appendleft(msg)
+        else:
+            self.msg_out_buffer.append(msg)
+
+    async def _request_listener(self):
+        while True:
+            if not self.websocket.client_state == WebSocketState.CONNECTED:
+                break
+            try:
+                req = await asyncio.wait_for(self.websocket.receive_bytes(), timeout=self.yield_time)
+                if req == b'ping':
+                    continue
+                self.recieve_request(req)
+            except asyncio.TimeoutError:
+                if not self.websocket.client_state == WebSocketState.CONNECTED:
+                    break
+            except asyncio.CancelledError:
+                break
+
+    async def request_listener(self):
+        await self.async_ws_wrapper(self._request_listener)
+
+    async def _msg_pusher(self):
+        while True:
+            try:
+                if self.msg_out_buffer:
+                    msg = self.msg_out_buffer.popleft()
+                    await self.websocket.send_bytes(msg.SerializeToString())
+                else:
+                    await asyncio.sleep(self.yield_time)
+            except asyncio.CancelledError:
+                break
+
+    async def msg_pusher(self):
+        await self.async_ws_wrapper(self._msg_pusher)
+
+    async def _request_handler(self):
+        while True:
+            try:
+                if self.unhandled_requests:
+                    req = self.unhandled_requests.popleft()
+                    self.process_request(req)
+                else:
+                    await asyncio.sleep(self.yield_time)
+            except asyncio.CancelledError:
+                break
+
+    async def _heartbeat(self):
+        while True:
+            try:
+                await self.websocket.send_text('ping')
+                await asyncio.sleep(0.5)
+            except asyncio.CancelledError:
+                break
+
+    async def heartbeat(self):
+        await self.async_ws_wrapper(self._heartbeat)
+
+    async def request_handler(self):
+        await self.async_ws_wrapper(self._request_handler)
+
+    async def cancel(self):
+        log.debug("DataStreamHandler task cancelled")
+        for task in self.sub_tasks:
+            if not task.done():
+                try:
+                    task.cancel()
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self.sub_tasks.clear()
+
+    async def start(self):
+        try:
+            self.sub_tasks.add(asyncio.create_task(self.request_listener()))
+            self.sub_tasks.add(asyncio.create_task(self.request_handler()))
+            self.sub_tasks.add(asyncio.create_task(self.msg_pusher()))
+            self.sub_tasks.add(asyncio.create_task(self.heartbeat()))
+            await asyncio.gather(*self.sub_tasks)
+        finally:
+            await self.cancel()
+
+

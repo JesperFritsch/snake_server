@@ -95,7 +95,7 @@ class CanvasHandler {
         this.stream_handler = null;
         this.reset_stream_handler(domain); // creates a new stream handler
         this.frame_index = 0;
-        this.frame_interval = 1 / 20; // 20 fps
+        this.frame_interval = 1 / 30; // 20 fps
         this.interval_id = null;
     }
 
@@ -115,7 +115,6 @@ class CanvasHandler {
     }
 
     init(init_data){
-        console.log("DRGSEREGAESRGAERGAERGAERGAERGAER");
         this.frame_handler.init(init_data.width * 2, init_data.height * 2, 1, 1, 0, 0);
         this.canvas.width = this.frame_handler.total_width;
         this.canvas.height = this.frame_handler.total_height;
@@ -166,7 +165,9 @@ class CanvasHandler {
                 }
             }
         }
+        // base_map_frame.fill(255);
         this.frame_handler.set_base_map(base_map_frame);
+        this.show_frame(base_map_frame);
     }
 
     show_frame(frame_img) {
@@ -176,12 +177,14 @@ class CanvasHandler {
 
     run() {
         console.log("Running");
+        console.log(this.frame_handler.frame_images);
+        console.log(this.frame_index);
         this.interval_id = setInterval(() => {
             if (this.frame_index < this.frame_handler.frame_images.length) {
                 this.show_frame(this.frame_handler.frame_images[this.frame_index]);
                 this.frame_index++;
             }
-        }, 100);
+        }, this.frame_interval * 1000);
     }
 
     stop() {
@@ -259,27 +262,7 @@ class StreamHandler {
     }
 
     msg_reciever(message) {
-        if (!this.got_init_data) {
-            this._process_msg(message.data);
-            // this.got_init_data = true;
-            // const init_data = JSON.parse(message.data);
-            // console.log(init_data);
-            // this.on_init_data(init_data);
-        }
-        else {
-            const data = message.data;
-
-            const pixel_changes = this._process_msg(data);
-            // const view = new DataView(data);
-            // const pixels = [];
-            // for (let i = 0; i < view.byteLength; i += 5) {
-            //     const coord = [view.getUint8(i), view.getUint8(i + 1)];
-            //     const color = [view.getUint8(i + 2), view.getUint8(i + 3), view.getUint8(i + 4)];
-            //     pixels.push([coord, color]);
-            // }
-
-            this.msg_handler(pixel_changes);
-        }
+        this._process_msg(message.data);
     }
 
     _process_msg(data) {
@@ -306,8 +289,7 @@ class StreamHandler {
                         pxl_data.color.b
                     ]]);
             });
-            return pixel_changes_data;
-            // this.msg_handler(pixel_changes_data);
+            this.msg_handler(pixel_changes_data);
         }
         else if (message.type == MSG_TYPE.values.RUN_META_DATA){
             let run_meta_data_type = this.proto_root.lookupType("snakesim.RunMetaData");
@@ -315,9 +297,7 @@ class StreamHandler {
             let run_meta_data = run_meta_data_type.toObject(run_meta_data_proto, {
                 defaults: true,
             });
-            console.log(run_meta_data);
             run_meta_data.baseMap = unflattenArray(run_meta_data.baseMap, run_meta_data.width);
-            console.log(run_meta_data);
             this.on_init_data(run_meta_data);
         }
         else{
