@@ -3,3 +3,4 @@ fastapi
 numpy
 websockets
 requests
+setuptools

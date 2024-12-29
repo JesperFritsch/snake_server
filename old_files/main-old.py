@@ -23,7 +23,7 @@ from snake_sim.snake_env import SnakeEnv
 from snake_sim.utils import DotDict
 
 from process_pool import MultiStreamManager
-from data_stream_handler import DataStreamHandler
+from server.data_stream_handler import DataStreamHandler
 
 MAX_STREAMS = 5
 
@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 protodir = files('snake_sim').joinpath('protobuf')
-app.mount("/client", StaticFiles(directory="client"), name="client")
+app.mount("/client", StaticFiles(directory="../client"), name="client")
 app.mount("/static", StaticFiles(directory=protodir), name="static")
 
 def get_default_config():

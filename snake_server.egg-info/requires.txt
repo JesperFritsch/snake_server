@@ -1,0 +1,6 @@
+uvicorn
+fastapi
+numpy
+websockets
+requests
+setuptools

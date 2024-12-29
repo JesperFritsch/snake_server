@@ -212,7 +212,7 @@ class StreamHandler {
 
     async init_protobuf(){
         try{
-            return protobuf.load("/static/sim_msgs.proto", (err, root) => {
+            return protobuf.load("/protobuf/sim_msgs.proto", (err, root) => {
                 if (err) {
                     throw err;
                 }

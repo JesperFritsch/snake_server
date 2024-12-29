@@ -4,3 +4,4 @@ __pycache__/
 server_venv/
 runs/
 logs/
+build/

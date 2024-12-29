@@ -10,7 +10,7 @@ from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 
 from process_pool import MultiStreamManager
-from snake_sim.render.core import FrameBuilder, OutOfSyncError
+from snake_sim.render.core import FrameBuilder
 from snake_sim.snake_env import StepData, RunData
 from snake_sim.protobuf.sim_msgs_pb2 import (
     MsgWrapper,
