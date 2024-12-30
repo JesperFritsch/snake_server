@@ -7,8 +7,12 @@ class StoredSource(IStreamSource):
     def __init__(self, run_data: RunData):
         self._run_data: RunData = run_data
 
+    def is_done(self) -> bool:
+        return True
+
     def get_step_range(self, start: int, end: int) -> List[StepData]:
-        return self._run_data.steps[start:end]
+        steps = [self._run_data.steps[i] for i in range(start, end)]
+        return steps
 
     def get_full_step(self, step_nr: int) -> StepData:
         full_state = self._run_data.get_state_dict(step_nr)
@@ -20,5 +24,8 @@ class StoredSource(IStreamSource):
     def get_run_data(self) -> RunData:
         return self._run_data
 
-    def get_meta_data(self):
+    def get_meta_data(self) -> dict:
         return self._run_data.get_metadata()
+
+    def las_available_step(self) -> int:
+        return len(self._run_data.steps) - 1

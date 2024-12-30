@@ -19,12 +19,21 @@ class AsyncIPCLoopSource(ILiveStreamSource):
         self._run_data: RunData = None
         self._stop_event = Event()
         self._recieve_task = asyncio.create_task(self.recieve_data())
+        self._last_recieved_step = 0
+        self._is_done = False
+
+    def is_done(self):
+        return self._is_done
+
+    def las_available_step(self):
+        return self._last_recieved_step
 
     def get_run_config(self):
         return self._run_config
 
     def get_step_range(self, start: int, end: int) -> List[StepData]:
-        return self._run_data.steps[start:end]
+        steps = [self._run_data.steps[i] for i in range(start, end)]
+        return steps
 
     def get_full_step(self, step_nr: int) -> StepData:
         full_state = self._run_data.get_state_dict(step_nr)
@@ -36,7 +45,7 @@ class AsyncIPCLoopSource(ILiveStreamSource):
     def get_run_data(self) -> RunData:
         return self._run_data
 
-    def get_meta_data(self):
+    def get_meta_data(self) -> dict:
         if self._run_data is None:
             raise RuntimeError('Source is not ready yet')
         return self._run_data.get_metadata()
@@ -67,9 +76,13 @@ class AsyncIPCLoopSource(ILiveStreamSource):
                 data = self._pipe.recv()
                 if data == "stopped":
                     break
-                self._run_data.add_step(StepData.from_dict(data))
+                step_data = StepData.from_dict(data)
+                self._last_recieved_step = step_data.step
+                self._run_data.add_step(step_data)
         except (BrokenPipeError, EOFError, OSError):
             print("Connection to process lost.")
             # print("TRACEBACK", exc_info=True)
         except asyncio.CancelledError:
             print("Recieve task canceled.")
+        finally:
+            self._is_done = True

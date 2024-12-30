@@ -6,4 +6,4 @@ router = APIRouter()
 @router.websocket("/watch/{run_id}")
 async def watch_websocket(websocket: WebSocket, run_id: str):
     """ Provided a run id, if the run is available as either ongoing or stored, send the data to the client """
-    pass
+    await websocket_services.start_stream(websocket, run_id)

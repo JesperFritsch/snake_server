@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 server_venv/
+*.egg-info/
 runs/
 logs/
 build/
+**/file_store/

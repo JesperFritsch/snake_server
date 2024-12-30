@@ -48,7 +48,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         self._monitor_task = None
         self._manager = Manager()
 
-    async def start_monitor(self):
+    def start_monitor(self):
         self._monitor_task = asyncio.create_task(self._monitor_processes())
 
     async def _monitor_processes(self):
@@ -77,7 +77,6 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         loop_control = setup_loop(DotDict(config))
         loop_control.add_run_data_observer(observer)
         self._submit(loop_control.run, run_id)
-        log.info(f"Started run with id {run_id}")
         return run_id
 
     def _submit(self, func, run_id: str):
@@ -86,7 +85,6 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         self._running_processes[run_id] = RunningProcess(run_id, future, stop_event)
 
     def finish_proc(self, run_id: str):
-        log.info(f"Finishing process with id {run_id}")
         if run_id in self._running_processes:
             self._running_processes[run_id].cancel()
             del self._running_processes[run_id]

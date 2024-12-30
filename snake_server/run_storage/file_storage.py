@@ -10,8 +10,8 @@ from snake_sim.run_data.run_data import RunData
 log = logging.getLogger(Path(__file__).stem)
 
 class RunFileStorage(IRunStorage):
-    name_template = "{height}x{width}_{food}_{food_decay}_{snake_count}_{map_name}_{run_id}.pb"
-    name_parts_re = re.compile(r'(?P<height>\d+)x(?P<width>\d+)_(?P<food>\d+)_(?P<food_decay>\d+)_(?P<snake_count>\d+)_(?P<map_name>\w+)_(?P<run_id>.+)\.pb')
+    name_template = "{height}x{width}_{food}_{food_decay}_{snake_count}_{map_name}_{run_id}.json"
+    name_parts_re = re.compile(r'^(?P<height>\d+)x(?P<width>\d+)_(?P<food>\d+)_(?P<food_decay>\d+)_(?P<snake_count>\d+)_(?P<map_name>\w+)_(?P<run_id>.+)\.(pb|json)$')
     def __init__(self, storage_root: Optional[str] = ''):
         storage_root = storage_root or Path(__file__).parent.joinpath('file_store')
         storage_root_path = Path(storage_root)
@@ -43,9 +43,10 @@ class RunFileStorage(IRunStorage):
 
     def get_run(self, run_id: str) -> RunData:
         files = self.storage_root.glob(f"*{run_id}.*")
-        if not files:
+        try:
+            file = next(files)
+        except StopIteration:
             return None
-        file = files[0]
         try:
             if file.suffix == '.pb':
                 return RunData.from_protobuf_file(file)
@@ -60,6 +61,8 @@ class RunFileStorage(IRunStorage):
         run_ids = []
         for filename in matching_files:
             match = self.name_parts_re.match(filename)
+            if not match:
+                continue
             run_id = match.group('run_id')
             run_ids.append(run_id)
         return run_ids
@@ -71,6 +74,7 @@ class RunFileStorage(IRunStorage):
         food_decay = run_config['food_decay']
         snake_count = run_config['snake_count']
         map_name = run_config['map']
+        map_name = map_name or 'None'
         filename = self.name_template.format(
             height=height,
             width=width,

@@ -1,35 +1,29 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from snake_server.app.services import api_services
-
-class RequestRunConfig(BaseModel):
-    """ Configuration for a run """
-    grid_height: int
-    grid_width: int
-    food: int
-    food_decay: int
-    snake_count: int
-    map: str
-
-class RequestRunResponse(BaseModel):
-    """ Response for a run request """
-    run_id: str
+from snake_server.app.services.requests.action_requests import RunRequest
+from snake_server.app.services.responses.action_responses import RequestActionResponse
 
 router = APIRouter()
 
 @router.post("/request_run")
-async def request_run(run_config: RequestRunConfig) -> RequestRunResponse:
+async def request_run(run_config: RunRequest) -> RequestActionResponse:
     """ Request a run, return the id of the run """
-    run_id = api_services.request_run(run_config.model_dump())
-    return RequestRunResponse(run_id=run_id)
+    try:
+        run_id = api_services.request_run(run_config.model_dump())
+    except Exception as e:
+        return RequestActionResponse(run_id=None, action="request_run", result="error")
+    else:
+        return RequestActionResponse(run_id=run_id, action="request_run", result="success")
+
 
 @router.post("/stop_ongoing/{run_id}")
-async def stop_ongoing_run(run_id: str):
+async def stop_ongoing_run(run_id: str) -> RequestActionResponse:
     """ Stop an ongoing run by id """
-    pass
+    try:
+        api_services.stop_run(run_id)
+    except Exception as e:
+        return RequestActionResponse(run_id=run_id, action="stop_ongoing_run", result="error")
+    else:
+        return RequestActionResponse(run_id=run_id, action="stop_ongoing_run", result="success")
 
-@router.get("/stored/{run_id}")
-async def get_stored_run(run_id: str):
-    """ Get a stored run by id, returns the data as a file"""
-    pass

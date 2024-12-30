@@ -1,7 +1,5 @@
 import asyncio
 import websockets
-import json
-import struct
 import requests
 import logging
 from urllib.parse import urljoin, urlencode
@@ -17,13 +15,14 @@ from snake_sim.protobuf.sim_msgs_pb2 import (
     MessageType,
     Request,
     RequestType,
-    RequestAck,
     StepData as proto_step_data,
-    StepDataRequest,
-    PixelChangesRequest,
-    RunMetaDataRequest
+    StepDataReq,
+    PixelChangesReq,
+    RunMetaDataRequest,
+    RunUpdate,
+    BadRequest
 )
-from snake_sim.snake_env import StepData, RunData
+from snake_sim.run_data.run_data import StepData, RunData
 from google.protobuf.json_format import MessageToDict
 
 log = logging.getLogger(__name__)
@@ -60,6 +59,14 @@ async def reciever(websocket: websockets):
                     step_data = proto_step_data()
                     step_data.ParseFromString(msg.payload)
                     step_queue.append(step_data)
+                elif msg.type == MessageType.BAD_REQUEST:
+                    bad_req = BadRequest()
+                    bad_req.ParseFromString(msg.payload)
+                    log.error(f"Bad request: {bad_req}")
+                elif msg.type == MessageType.RUN_UPDATE:
+                    update = RunUpdate()
+                    update.ParseFromString(msg.payload)
+                    log.info(f"Run update: {update}")
         except websockets.exceptions.ConnectionClosed as e:
             print(f"Connection closed: {e}")
             break
@@ -69,12 +76,12 @@ async def request_data(websocket):
     last_requested_step = 0
     while True:
         try:
-            start_step = last_requested_step + 1
-            end_step = start_step + 9
+            start_step = last_requested_step
+            end_step = start_step + 10
             last_requested_step = end_step
             req = Request(
                 type=RequestType.STEP_DATA_REQ,
-                payload=StepDataRequest(start_step=start_step, end_step=end_step, full_state=False).SerializeToString()
+                payload=StepDataReq(start_step=start_step, end_step=end_step).SerializeToString()
             )
             await websocket.send(req.SerializeToString())
             print(f"Sending request: {req}")
@@ -97,27 +104,30 @@ async def data_pusher(conn):
 
 
 async def snake_stream():
-    base_uri = "ws://localhost:42069/stream"
+    base_uri = "ws://localhost:42069/ws/watch"
     request_uri = "http://localhost:42069/api/request_run"
-    info_uri = "http://localhost:42069/api/run_info"
     websocket = None
     render_conn, child_conn = Pipe()
     render_p = Process(target=play_stream, args=(child_conn,))
     render_p.start()
     run_config = {
-        "width": 32,
-        "height": 32,
+        "grid_width": 32,
+        "grid_height": 32,
         "food": 15,
+        "food_decay": 0,
         "snake_count": 1,
         "map": "items",
+        "start_length": 5
     }
     try:
         response = requests.post(request_uri, json=run_config)
-        run_info = requests.get(info_uri).json()
-        run_config_resp = response.json()
-        stream_id = run_config_resp["stream_id"]
-        # stream_id = "a3516aa2-017b-4448-a706-de7672f0fa39"
-        print(run_info)
+        resp = response.json()
+        if response.status_code != 200:
+            raise Exception(f"Error requesting run: {resp}")
+        if resp['result'] != 'success':
+            raise Exception(f"Error requesting run: {resp['error']}")
+        stream_id = resp["run_id"]
+        # stream_id = "45f9cc23-4f5d-4efb-87b3-bdb9e2f62920"
         stream_uri = '/'.join([base_uri, stream_id])
         print(f"Stream URI: {stream_uri}")
         websocket = await websockets.connect(stream_uri)
@@ -150,7 +160,9 @@ async def snake_stream():
             await websocket.close()
             print("WebSocket closed.")
     while render_p.is_alive():
-        pass
+        if input("Press q to quit: ") == 'q':
+            render_p.terminate()
+            break
 
 async def main():
     await snake_stream()

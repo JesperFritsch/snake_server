@@ -20,7 +20,7 @@ log = logging.getLogger(Path(__file__).stem)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        await SnakeProcessPool().start_monitor()
+        SnakeProcessPool().start_monitor()
         yield
     finally:
         log.info("life span cleanup")

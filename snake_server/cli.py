@@ -19,7 +19,7 @@ def log_level_type(level_name):
 
 def cli(sys_argv):
     parser = argparse.ArgumentParser("Run the snake server")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=42069)
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--dev", action="store_true")
     parser.add_argument(

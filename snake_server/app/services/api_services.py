@@ -14,3 +14,7 @@ def request_run(config: dict) -> str:
     """ Request a run, return the id of the run """
     config = {**default_config, **config}
     return pool.start_run(DotDict(config))
+
+def stop_run(run_id: str):
+    """ Stop an ongoing run by id """
+    pool.finish_proc(run_id)
