@@ -111,7 +111,11 @@ class DataStreamHandler:
             raise e
 
     def init_frame_builder(self):
-        meta_data = self._stream_source.get_meta_data()
+        try:
+            meta_data = self._stream_source.get_meta_data()
+        except RuntimeError as e:
+            log.error(e)
+            return
         self._frame_builder = FrameBuilder(run_meta_data=meta_data, expand_factor=2, offset=(1, 1))
 
     def metadata_to_proto(self, meta_data: dict) -> RunMetaData:
@@ -151,7 +155,6 @@ class DataStreamHandler:
             raise ValueError(f"End step '{req.end_step}' should be greater than 0")
 
     def bad_request(self, req: Request, error: str):
-        log.error(f"Bad request: {req}, error: {error}")
         bad_req = BadRequest()
         bad_req.error = error
         bad_req.type = req.type
@@ -213,10 +216,10 @@ class DataStreamHandler:
             self.add_msg_to_buffer(wrapper_msg)
 
     def handle_run_meta_data_request(self):
-        log.debug(f"Handling run metadata request for stream: {self.stream_id}")
-        run_meta_data = self._stream_source.get_meta_data()
-        if not run_meta_data:
-            log.error(f"Run metadata not found for stream: {self.stream_id}")
+        try:
+            run_meta_data = self._stream_source.get_meta_data()
+        except RuntimeError as e:
+            log.error(e)
             return
         run_meta_data['steps'] = {}
         run_data = RunData.from_dict(run_meta_data)
@@ -226,7 +229,6 @@ class DataStreamHandler:
         self.add_msg_to_buffer(wrapper_msg)
 
     def process_request(self, req: Union[StepDataReq, PixelChangesReq, RunMetaDataRequest]):
-        log.debug(f"Processing request: {MessageToDict(req)}")
         try:
             if isinstance(req, StepDataReq):
                 self.handle_step_data_request(req)
@@ -252,7 +254,6 @@ class DataStreamHandler:
                     self.bad_request(req_obj, str(e))
                     return
             self.add_request(req_obj)
-            log.debug(f"Request received: {req_obj}")
         except ValueError as e:
             log.error(e)
             log.debug("TRACEBACK", exc_info=True)
@@ -321,7 +322,6 @@ class DataStreamHandler:
         await self.async_ws_wrapper(self._request_handler)
 
     async def cancel(self):
-        log.debug("DataStreamHandler task cancelled")
         for task in self.sub_tasks:
             if not task.done():
                 try:

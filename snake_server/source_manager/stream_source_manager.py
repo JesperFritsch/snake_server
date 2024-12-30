@@ -33,7 +33,6 @@ class StreamSourceManager(metaclass=SingletonMeta):
         return list(self._live_sources.keys())
 
     def _store_live_source(self, source_id):
-        log.debug(f"Storing live source with id {source_id}")
         run_data = self._live_sources[source_id].get_run_data()
         config = self._live_sources[source_id].get_run_config()
         self._stored_sources.store_run(run_data, source_id, config)

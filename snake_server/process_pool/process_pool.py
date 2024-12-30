@@ -57,7 +57,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
                 self._check_processes()
                 await asyncio.sleep(2)
         except asyncio.CancelledError:
-            log.info("Process monitoring task canceled.")
+            pass
         except Exception as e:
             log.error(f"Unexpected error in process monitoring: {e}")
 
@@ -104,7 +104,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
                 try:
                     await self._monitor_task
                 except asyncio.CancelledError:
-                    log.debug("Monitor task canceled")
+                    pass
         except Exception as e:
             log.error(f"Error shutting down process pool: {e}")
             log.debug("TRACEBACK", exc_info=True)
