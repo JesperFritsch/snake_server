@@ -1,0 +1,9 @@
+
+
+#gameCanvas {
+    background-color: #000000;
+    margin: 0 auto;
+    image-rendering: pixelated;
+    height: 800px;
+    width: 800px;
+}
