@@ -19,6 +19,7 @@ async def start_stream(websocket: WebSocket, run_id: str):
     try:
         stream_source = source_manager.get_source(run_id)
         data_stream = DataStreamHandler(websocket, stream_source, run_id)
+        await data_stream.init_frame_builder()
         data_stream_task = asyncio.create_task(data_stream.start())
         await data_stream_task
 

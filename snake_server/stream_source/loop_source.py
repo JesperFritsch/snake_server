@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import numpy as np
+import time
 from pathlib import Path
 from asyncio import Event
 from multiprocessing.connection import PipeConnection
@@ -45,7 +46,10 @@ class AsyncIPCLoopSource(ILiveStreamSource):
     def get_run_data(self) -> RunData:
         return self._run_data
 
-    def get_meta_data(self) -> dict:
+    async def get_meta_data(self) -> dict:
+        start_time = time.time()
+        while self._run_data is None and time.time() - start_time < 5:
+            await asyncio.sleep(0.05)
         if self._run_data is None:
             raise RuntimeError('Source is not ready yet')
         return self._run_data.get_metadata()

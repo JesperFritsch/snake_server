@@ -4,3 +4,4 @@ numpy
 websockets
 requests
 setuptools
+grpcio

@@ -90,7 +90,6 @@ class DataStreamHandler:
         self._stream_source = stream_source
         self._yield_time = 0.01
         self._frame_builder = None
-        self.init_frame_builder()
         self._unhandled_requests: Deque[Request] = deque()
         self._msg_out_buffer: Deque[Message] = deque()
         self.sub_tasks = set()
@@ -110,9 +109,9 @@ class DataStreamHandler:
             log.debug("TRACEBACK", exc_info=True)
             raise e
 
-    def init_frame_builder(self):
+    async def init_frame_builder(self):
         try:
-            meta_data = self._stream_source.get_meta_data()
+            meta_data = await self._stream_source.get_meta_data()
         except RuntimeError as e:
             log.error(e)
             return
@@ -126,24 +125,15 @@ class DataStreamHandler:
         meta_proto = run_data.to_protobuf()
         return meta_proto.run_meta_data
 
-    def split_request(self, req: Request):
+    def split_request(self, req: Union[StepDataReq, PixelChangesReq]):
         # Split the request into two requests, one for the last available step and one for the rest
-        req_type = req.type
-        req_payload = req.payload
-        if req_type == RequestType.STEP_DATA_REQ:
-            orig_req = StepDataReq()
-            orig_req.ParseFromString(req_payload)
-            new_req_payload = StepDataReq()
-        elif req_type == RequestType.PIXEL_CHANGES_REQ:
-            orig_req = PixelChangesReq()
-            orig_req.ParseFromString(req_payload)
-            new_req_payload = PixelChangesReq()
-        new_req_payload.CopyFrom(orig_req)
+        new_req_payload = req.__class__()
+        new_req_payload.CopyFrom(req)
         last_available_step = self.get_last_available_step()
-        orig_req.end_step = last_available_step
+        req.end_step = last_available_step
         new_req_payload.start_step = last_available_step + 1
         self.add_request(new_req_payload)
-        return orig_req
+        return req
 
     def get_last_available_step(self):
         return self._stream_source.las_available_step()
@@ -164,7 +154,7 @@ class DataStreamHandler:
     def last_step_update(self):
         last_step = self.get_last_available_step()
         update = RunUpdate()
-        update.last_step = last_step
+        update.final_step = last_step
         self.add_msg_to_buffer(update, priority=True)
 
     def request_out_of_bounds(self, req: Union[StepDataReq, PixelChangesReq, FullStepDataReq, FullPixelChangesReq]):
@@ -180,13 +170,13 @@ class DataStreamHandler:
             return True
         return False
 
-    def handle_full_pixel_changes_request(self, req: FullPixelChangesReq):
+    async def handle_full_pixel_changes_request(self, req: FullPixelChangesReq):
         full_step = self._stream_source.get_full_step(req.step)
         full_state_change = self._frame_builder.full_step_to_pixel_data(full_step.to_dict(full_state=True))
         msg = create_pixel_change_proto_msg(full_state_change, full_state=True)
         self.add_msg_to_buffer(msg)
 
-    def handle_pixel_changes_request(self, req: PixelChangesReq):
+    async def handle_pixel_changes_request(self, req: PixelChangesReq):
         if self.request_out_of_bounds(req):
             req = self.split_request(req)
         start_step = max(0, req.start_step)
@@ -198,13 +188,13 @@ class DataStreamHandler:
                 msg = create_pixel_change_proto_msg(change)
                 self.add_msg_to_buffer(msg)
 
-    def handle_full_step_data_request(self, req: FullStepDataReq):
+    async def handle_full_step_data_request(self, req: FullStepDataReq):
         full_step = self._stream_source.get_full_step(req.step)
         full_step_proto = full_step.to_protobuf(full_state=True)
         wrapper_msg = wrap_message(full_step_proto)
         self.add_msg_to_buffer(wrapper_msg)
 
-    def handle_step_data_request(self, req: StepDataReq):
+    async def handle_step_data_request(self, req: StepDataReq):
         if self.request_out_of_bounds(req):
             req = self.split_request(req)
         start_step = max(0, req.start_step)
@@ -215,9 +205,9 @@ class DataStreamHandler:
             wrapper_msg = wrap_message(step_proto)
             self.add_msg_to_buffer(wrapper_msg)
 
-    def handle_run_meta_data_request(self):
+    async def handle_run_meta_data_request(self):
         try:
-            run_meta_data = self._stream_source.get_meta_data()
+            run_meta_data = await self._stream_source.get_meta_data()
         except RuntimeError as e:
             log.error(e)
             return
@@ -228,14 +218,27 @@ class DataStreamHandler:
         wrapper_msg = wrap_message(run_meta_data_proto)
         self.add_msg_to_buffer(wrapper_msg)
 
-    def process_request(self, req: Union[StepDataReq, PixelChangesReq, RunMetaDataRequest]):
+    async def process_request(
+        self,
+        req: Union[
+            StepDataReq,
+            PixelChangesReq,
+            RunMetaDataRequest,
+            FullStepDataReq,
+            FullPixelChangesReq
+            ]
+        ):
         try:
             if isinstance(req, StepDataReq):
-                self.handle_step_data_request(req)
+                await self.handle_step_data_request(req)
             elif isinstance(req, PixelChangesReq):
-                self.handle_pixel_changes_request(req)
+                await self.handle_pixel_changes_request(req)
+            elif isinstance(req, FullStepDataReq):
+                await self.handle_full_step_data_request(req)
+            elif isinstance(req, FullPixelChangesReq):
+                await self.handle_full_pixel_changes_request(req)
             elif isinstance(req, RunMetaDataRequest):
-                self.handle_run_meta_data_request()
+                await self.handle_run_meta_data_request()
             else:
                 log.error(f"Unknown request: {req}")
         except ValueError as e:
@@ -243,9 +246,9 @@ class DataStreamHandler:
             log.debug("TRACEBACK", exc_info=True)
 
     def recieve_request(self, req: Request):
-        req_wrapper = Request()
-        req_wrapper.ParseFromString(req)
         try:
+            req_wrapper = Request()
+            req_wrapper.ParseFromString(req)
             req_obj = unwrap_request(req_wrapper)
             if isinstance(req_obj, (StepDataReq, PixelChangesReq)):
                 try:
@@ -301,7 +304,7 @@ class DataStreamHandler:
             try:
                 if self._unhandled_requests:
                     req = self._unhandled_requests.popleft()
-                    self.process_request(req)
+                    await self.process_request(req)
                 else:
                     await asyncio.sleep(self._yield_time)
             except asyncio.CancelledError:
@@ -310,7 +313,7 @@ class DataStreamHandler:
     async def _heartbeat(self):
         while True:
             try:
-                await self.websocket.send_text('p')
+                await self.websocket.send_text('ping')
                 await asyncio.sleep(0.5)
             except asyncio.CancelledError:
                 break

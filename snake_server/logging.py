@@ -13,7 +13,7 @@ def setup_loggers(console_level=logging.INFO):
     root_logger.addHandler(console_handler)
 
     # File handler
-    file_handler = RotatingFileHandler('logs/webserver.log', maxBytes=5*1024*1024, backupCount=2)
+    file_handler = RotatingFileHandler('webserver.log', maxBytes=5*1024*1024, backupCount=2)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(default_formatter)
     root_logger.addHandler(file_handler)

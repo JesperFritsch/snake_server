@@ -24,7 +24,7 @@ class StoredSource(IStreamSource):
     def get_run_data(self) -> RunData:
         return self._run_data
 
-    def get_meta_data(self) -> dict:
+    async def get_meta_data(self) -> dict:
         return self._run_data.get_metadata()
 
     def las_available_step(self) -> int:

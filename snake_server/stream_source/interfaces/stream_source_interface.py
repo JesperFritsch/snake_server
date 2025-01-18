@@ -19,7 +19,7 @@ class IStreamSource(ABC):
         pass
 
     @abstractmethod
-    def get_meta_data(self) -> dict:
+    async def get_meta_data(self) -> dict:
         pass
 
     @abstractmethod
