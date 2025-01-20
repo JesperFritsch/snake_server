@@ -4,6 +4,7 @@ from importlib import resources
 from snake_sim.utils import DotDict
 
 from snake_server.process_pool.process_pool import SnakeProcessPool
+from snake_sim.utils import get_map_files_mapping
 
 with resources.open_text('snake_sim.config', 'default_config.json') as config_file:
     default_config = DotDict(json.load(config_file))
@@ -18,3 +19,6 @@ def request_run(config: dict) -> str:
 def stop_run(run_id: str):
     """ Stop an ongoing run by id """
     pool.finish_proc(run_id)
+
+def get_map_names():
+    return list(get_map_files_mapping().keys())

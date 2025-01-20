@@ -60,9 +60,14 @@ class MultiStreamManager(metaclass=SingletonMeta):
         return False
 
     def cleanup(self):
-        for stream_proc in self.running_processes.values():
-            stream_proc.cancel()
-        self.process_pool.shutdown()
+        try:
+            for stream_proc in self.running_processes.values():
+                stream_proc.cancel()
+            self.process_pool.shutdown()
+        except asyncio.CancelledError:
+            pass
+        except KeyboardInterrupt:
+            pass
 
     def stop_stream(self, stream_id: str):
         if stream_id in self.running_processes:

@@ -23,7 +23,7 @@ class IStreamSource(ABC):
         pass
 
     @abstractmethod
-    def las_available_step(self) -> int:
+    def last_available_step(self) -> int:
         pass
 
     @abstractmethod

@@ -22,6 +22,8 @@ async def lifespan(app: FastAPI):
     try:
         SnakeProcessPool().start_monitor()
         yield
+    except KeyboardInterrupt:
+        log.info("Server stopped by user")
     finally:
         log.info("life span cleanup")
         await SnakeProcessPool().shutdown()
@@ -39,7 +41,10 @@ setup_loggers(logging.DEBUG)
 
 def main():
     args = cli(sys.argv[1:])
-    uvicorn.run("snake_server.main:app", host=args.host, port=args.port, reload=args.dev)
+    try:
+        uvicorn.run("snake_server.main:app", host=args.host, port=args.port, reload=args.dev)
+    except KeyboardInterrupt:
+        log.info("Server stopped by user")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from typing import List
 
 from snake_server.app.services import api_services
 from snake_server.app.services.requests.action_requests import RunRequest
@@ -27,3 +28,6 @@ async def stop_ongoing_run(run_id: str) -> RequestActionResponse:
     else:
         return RequestActionResponse(run_id=run_id, action="stop_ongoing_run", result="success")
 
+@router.get("/map_names")
+async def get_map_names() -> List[str]:
+    return api_services.get_map_names()

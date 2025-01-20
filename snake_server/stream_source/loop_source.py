@@ -26,14 +26,14 @@ class AsyncIPCLoopSource(ILiveStreamSource):
     def is_done(self):
         return self._is_done
 
-    def las_available_step(self):
+    def last_available_step(self):
         return self._last_recieved_step
 
     def get_run_config(self):
         return self._run_config
 
     def get_step_range(self, start: int, end: int) -> List[StepData]:
-        steps = [self._run_data.steps[i] for i in range(start, end)]
+        steps = [self._run_data.steps[i] for i in range(start, end + 1)]
         return steps
 
     def get_full_step(self, step_nr: int) -> StepData:
@@ -48,7 +48,7 @@ class AsyncIPCLoopSource(ILiveStreamSource):
 
     async def get_meta_data(self) -> dict:
         start_time = time.time()
-        while self._run_data is None and time.time() - start_time < 5:
+        while self._run_data is None and time.time() - start_time < 10:
             await asyncio.sleep(0.05)
         if self._run_data is None:
             raise RuntimeError('Source is not ready yet')

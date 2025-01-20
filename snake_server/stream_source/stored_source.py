@@ -11,7 +11,7 @@ class StoredSource(IStreamSource):
         return True
 
     def get_step_range(self, start: int, end: int) -> List[StepData]:
-        steps = [self._run_data.steps[i] for i in range(start, end)]
+        steps = [self._run_data.steps[i] for i in range(start, end + 1)]
         return steps
 
     def get_full_step(self, step_nr: int) -> StepData:
@@ -27,5 +27,5 @@ class StoredSource(IStreamSource):
     async def get_meta_data(self) -> dict:
         return self._run_data.get_metadata()
 
-    def las_available_step(self) -> int:
+    def last_available_step(self) -> int:
         return len(self._run_data.steps) - 1

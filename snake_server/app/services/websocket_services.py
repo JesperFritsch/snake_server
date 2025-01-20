@@ -30,6 +30,9 @@ async def start_stream(websocket: WebSocket, run_id: str):
         log.error(e)
         log.debug(f"TRACEBACK: ", exc_info=True)
 
+    except asyncio.CancelledError:
+        log.info(f"Stream for run {run_id} cancelled")
+
     finally:
         if data_stream_task and not data_stream_task.done():
             data_stream_task.cancel()

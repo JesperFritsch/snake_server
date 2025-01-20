@@ -7,3 +7,4 @@ runs/
 logs/
 build/
 **/file_store/
+webserver.log*

@@ -89,7 +89,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
             self._running_processes[run_id].cancel()
             del self._running_processes[run_id]
         try:
-            source_manager.finish_live_source(run_id, store=True)
+            source_manager.finish_live_source(run_id, store=False)
         except ValueError:
             log.warning(f"Could not store source with id {run_id}")
 
