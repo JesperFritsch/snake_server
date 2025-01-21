@@ -12,7 +12,7 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-source /home/jesper/py_fun/snake_server/server_venv/bin/activate
+source /home/jesper/snake_server/server_venv/bin/activate
 
 umask 000
 run-snake-server $DEV
