@@ -4,7 +4,6 @@ import numpy as np
 import time
 from pathlib import Path
 from asyncio import Event
-from multiprocessing.connection import PipeConnection
 
 from typing import List
 from snake_server.stream_source.interfaces.stream_source_interface import ILiveStreamSource
@@ -13,7 +12,9 @@ from snake_sim.run_data.run_data import RunData, StepData
 log = logging.getLogger(Path(__file__).stem)
 
 class AsyncIPCLoopSource(ILiveStreamSource):
-    def __init__(self, pipe: PipeConnection, run_config: dict):
+    def __init__(self, pipe, run_config: dict):
+        if not pipe.__class__.__name__ in ['Connection', 'PipeConnection']:
+            raise ValueError('pipe_conn must be a Connection or PipeConnection object')
         super(ILiveStreamSource, self).__init__()
         self._run_config = run_config
         self._pipe = pipe
