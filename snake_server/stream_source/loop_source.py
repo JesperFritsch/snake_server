@@ -21,7 +21,7 @@ class AsyncIPCLoopSource(ILiveStreamSource):
         self._run_data: RunData = None
         self._stop_event = Event()
         self._recieve_task = asyncio.create_task(self.recieve_data())
-        self._last_recieved_step = 0
+        self._last_recieved_step = -1
         self._is_done = False
 
     def is_done(self):
@@ -49,7 +49,7 @@ class AsyncIPCLoopSource(ILiveStreamSource):
 
     async def get_meta_data(self) -> dict:
         start_time = time.time()
-        while self._run_data is None and time.time() - start_time < 10:
+        while self._run_data is None and time.time() - start_time < 20:
             await asyncio.sleep(0.05)
         if self._run_data is None:
             raise RuntimeError('Source is not ready yet')

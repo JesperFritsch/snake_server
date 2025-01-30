@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snake_server"
+version = "0.1.0"
+description = "A simple server for Snake game"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your_email@example.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "uvicorn",
+    "fastapi",
+    "numpy",
+    "websockets",
+    "requests",
+    "grpcio"
+]
+
+[project.scripts]
+run-snake-server = "snake_server.main:main"
+
+[tool.setuptools]
+packages = ["snake_server"]
+
+[tool.setuptools.package-data]
+snake_server = ["static/*"]

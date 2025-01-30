@@ -7,6 +7,7 @@ from importlib import resources
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect, WebSocketState
 
+from snake_server.process_pool.process_pool import SnakeProcessPool
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_handler.data_stream_handler import DataStreamHandler
 
@@ -18,6 +19,7 @@ with open(resources.files('snake_server').joinpath('config.ini')) as config_file
 log = logging.getLogger(Path(__file__).stem)
 
 source_manager = StreamSourceManager()
+process_pool = SnakeProcessPool()
 
 async def start_stream(websocket: WebSocket, run_id: str):
     # Maybe some condition to accept or reject the connection
@@ -30,15 +32,8 @@ async def start_stream(websocket: WebSocket, run_id: str):
         data_stream_task = asyncio.create_task(data_stream.start())
         await data_stream_task
 
-    except WebSocketDisconnect as e:
-        log.info(f"Connection closed by client")
-
-    except Exception as e:
-        log.error(e)
-        log.debug(f"TRACEBACK: ", exc_info=True)
-
-    except asyncio.CancelledError:
-        log.info(f"Stream for run {run_id} cancelled")
+    except KeyboardInterrupt:
+        pass
 
     finally:
         if data_stream_task and not data_stream_task.done():
@@ -53,4 +48,6 @@ async def start_stream(websocket: WebSocket, run_id: str):
             except RuntimeError as e:
                 pass
         if config.getboolean('snake_process', 'cleanup_on_disconnect'):
-            source_manager.finish_live_source(run_id)
+            log.debug(f"Stopping source: {run_id}")
+            process_pool.finish_proc(run_id)
+        log.info(f"Stream closed for {run_id}")

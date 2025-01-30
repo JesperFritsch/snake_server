@@ -1,5 +1,8 @@
 import logging
 import asyncio
+import atexit
+import sys
+
 from configparser import ConfigParser
 from importlib import resources
 from pathlib import Path
@@ -9,8 +12,6 @@ from multiprocessing import Pipe, Manager
 from uuid import uuid4
 
 from snake_sim.loop_observers.ipc_run_data_observer import IPCRunDataObserver
-from snake_sim.environment.snake_loop_control import setup_loop
-from snake_sim.utils import DotDict
 
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_source.loop_source import AsyncIPCLoopSource
@@ -24,6 +25,20 @@ log = logging.getLogger(Path(__file__).stem)
 
 # Singleton class to manage running processes
 source_manager = StreamSourceManager()
+
+def start_snake_run(config: dict, observer: AsyncIPCLoopSource, stop_event) -> str:
+    """
+    Function to run in a separate process
+    we need this intermediate function to reset the singeltons.
+    """
+    from snake_sim.environment.snake_loop_control import setup_loop
+    from snake_sim.utils import DotDict, SingletonMeta
+    SingletonMeta.reset()
+    loop_control = setup_loop(DotDict(config))
+    loop_control.add_run_data_observer(observer)
+    loop_control.run(stop_event)
+    sys.exit()
+
 
 class RunningProcess:
     def __init__(self, run_id: str, future: Future, stop_event):
@@ -53,7 +68,16 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         self._monitor_task = None
         self._manager = Manager()
 
-    def start_monitor(self):
+        atexit.register(self.shutdown_sync)
+
+    def shutdown_sync(self):
+        """Ensures shutdown runs safely even in a sync environment."""
+        try:
+            asyncio.run(self.shutdown())  # Runs async shutdown safely
+        except RuntimeError:
+            pass  # Handles cases where the event loop is already closed
+
+    async def start_monitor(self):
         self._monitor_task = asyncio.create_task(self._monitor_processes())
 
     async def _monitor_processes(self):
@@ -79,14 +103,12 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         observer = IPCRunDataObserver(child_pipe)
         loop_source = AsyncIPCLoopSource(pipe, config)
         source_manager.add_source(run_id, loop_source)
-        loop_control = setup_loop(DotDict(config))
-        loop_control.add_run_data_observer(observer)
-        self._submit(loop_control.run, run_id)
+        self._submit(start_snake_run, run_id, config, observer)
         return run_id
 
-    def _submit(self, func, run_id: str):
+    def _submit(self, func, run_id: str, config: dict, observer: AsyncIPCLoopSource):
         stop_event = self._manager.Event()
-        future = self._process_pool.submit(func, stop_event)
+        future = self._process_pool.submit(func, config, observer, stop_event)
         self._running_processes[run_id] = RunningProcess(run_id, future, stop_event)
 
     def finish_proc(self, run_id: str):
@@ -105,7 +127,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
             for run_id in self._running_processes.copy():
                 self.finish_proc(run_id)
             source_manager.cleanup()
-            self._process_pool.shutdown(wait=True) # wait=True means that the pool will wait for all processes to finish before shutting down
+            self._process_pool.shutdown(wait=False) # wait=True means that the pool will wait for all processes to finish before shutting down
             if self._monitor_task:
                 self._monitor_task.cancel()
                 try:

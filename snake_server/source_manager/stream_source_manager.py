@@ -45,7 +45,7 @@ class StreamSourceManager(metaclass=SingletonMeta):
                 self._store_live_source(source_id)
             del self._live_sources[source_id]
         else:
-            raise ValueError(f"Source with id {source_id} not found")
+            raise ValueError(f"Source with id {source_id} not found, could not finish")
 
     def cleanup(self, store=True):
         if store:

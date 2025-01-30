@@ -19,14 +19,15 @@ log = logging.getLogger(Path(__file__).stem)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    pool = SnakeProcessPool()
     try:
-        SnakeProcessPool().start_monitor()
+        await pool.start_monitor()
         yield
     except KeyboardInterrupt:
-        log.info("Server stopped by user")
+        pass
     finally:
         log.info("life span cleanup")
-        await SnakeProcessPool().shutdown()
+        await pool.shutdown()
         StreamSourceManager().cleanup()
 
 

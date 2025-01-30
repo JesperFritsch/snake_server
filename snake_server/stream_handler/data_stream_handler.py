@@ -102,7 +102,6 @@ class DataStreamHandler:
         self._waiting_requests: List[WaitingRequest] = []
         self._msg_out_buffer: Deque[Message] = deque()
         self.sub_tasks = set()
-        self._stream_is_done = asyncio.Event()
 
     def add_request(
             self,
@@ -125,12 +124,15 @@ class DataStreamHandler:
         try:
             return await coroutine(*args, **kwargs)
         except WebSocketDisconnect:
-            log.debug(f"Websocket disconnected for stream: {self.websocket}")
-            await self.cancel()
+            log.debug(f"Websocket disconnected for stream för faan: {self.websocket}")
+            if not getattr(self, "_is_canceling", False):
+                await self.cancel()
         except Exception as e:
             log.error(e)
-            log.debug("TRACEBACK", exc_info=True)
-            await self.cancel()
+            if not getattr(self, "_is_canceling", False):
+                await self.cancel()
+
+
 
     async def init_frame_builder(self):
         try:
@@ -314,12 +316,14 @@ class DataStreamHandler:
         return processable_requests
 
     async def _request_listener(self):
-        while self.websocket.client_state == WebSocketState.CONNECTED and not self._stream_is_done.is_set():
+        while self.websocket.client_state == WebSocketState.CONNECTED:
             try:
-                req = await asyncio.wait_for(self.websocket.receive_bytes())
+                req = await asyncio.wait_for(self.websocket.receive_bytes(), timeout=self._yield_time)
                 if req == b'ping':
                     continue
                 self.recieve_request(req)
+            except asyncio.TimeoutError:
+                continue
             except asyncio.CancelledError:
                 break
 
@@ -327,7 +331,7 @@ class DataStreamHandler:
         await self.async_ws_wrapper(self._request_listener)
 
     async def _msg_pusher(self):
-        while not self._stream_is_done.is_set():
+        while True:
             try:
                 if self._msg_out_buffer:
                     msg = self._msg_out_buffer.popleft()
@@ -341,7 +345,7 @@ class DataStreamHandler:
         await self.async_ws_wrapper(self._msg_pusher)
 
     async def _request_handler(self):
-        while not self._stream_is_done.is_set():
+        while True:
             try:
                 if self._unhandled_requests:
                     req = self._unhandled_requests.popleft()
@@ -357,13 +361,9 @@ class DataStreamHandler:
 
     async def _heartbeat(self):
         try:
-            while self.websocket.client_state == WebSocketState.CONNECTED and not self._stream_is_done.is_set():
+            while self.websocket.client_state == WebSocketState.CONNECTED:
                 await asyncio.sleep(0.5)
-                try:
-                    await self.websocket.send_text('ping')
-                except Exception as e:
-                    log.debug(e)
-                    break
+                await self.websocket.send_text('ping')
         except asyncio.CancelledError:
             pass
 
@@ -374,7 +374,8 @@ class DataStreamHandler:
         await self.async_ws_wrapper(self._request_handler)
 
     async def cancel(self):
-        self._stream_is_done.set()
+        if getattr(self, "_is_canceling", False):
+            return
         for task in self.sub_tasks:
             if not task.done():
                 try:
@@ -383,9 +384,9 @@ class DataStreamHandler:
                 except asyncio.CancelledError:
                     pass
         self.sub_tasks.clear()
+        self._is_canceling = True
 
     async def start(self):
-        self._stream_is_done.clear()
         try:
             self.sub_tasks.add(asyncio.create_task(self.request_listener()))
             self.sub_tasks.add(asyncio.create_task(self.request_handler()))
@@ -394,5 +395,6 @@ class DataStreamHandler:
             await asyncio.gather(*self.sub_tasks, return_exceptions=True)
         finally:
             await self.cancel()
+        log.info(f"DataStreamHandler closed for {self.stream_id}")
 
 
