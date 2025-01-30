@@ -91,7 +91,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
             source_manager.finish_live_source(run_id, store=False)
         except ValueError:
             log.warning(f"Could not store source with id {run_id}")
-        log.debug("Finished process with id:", run_id)
+        log.debug("Finished process with id: %s", run_id)
 
     async def shutdown(self):
         try:
