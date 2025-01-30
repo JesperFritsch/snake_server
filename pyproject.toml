@@ -28,6 +28,8 @@ run-snake-server = "snake_server.main:main"
 packages = ["snake_server"]
 include-package-data = true
 
+[tool.setuptools.packages.find]
+include = ["snake_server*"]
 
 [tool.setuptools.package-data]
 snake_server = ["static/*", "config.ini"]
