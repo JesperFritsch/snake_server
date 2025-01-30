@@ -12,7 +12,7 @@ from snake_server.stream_handler.data_stream_handler import DataStreamHandler
 
 config = ConfigParser()
 
-with resources.open_text('snake_server.config', 'config.ini') as config_file:
+with open(resources.files('snake_server').joinpath('config.ini')) as config_file:
     config.read_file(config_file)
 
 log = logging.getLogger(Path(__file__).stem)

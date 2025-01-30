@@ -17,7 +17,7 @@ from snake_server.stream_source.loop_source import AsyncIPCLoopSource
 from snake_server.utils import SingletonMeta
 
 config = ConfigParser()
-with resources.open_text('snake_server', 'config.ini') as config_file:
+with open(resources.files('snake_server').joinpath('config.ini')) as config_file:
     config.read_file(config_file)
 
 log = logging.getLogger(Path(__file__).stem)
