@@ -37,7 +37,6 @@ def start_snake_run(config: dict, observer: AsyncIPCLoopSource, stop_event) -> s
     loop_control = setup_loop(DotDict(config))
     loop_control.add_run_data_observer(observer)
     loop_control.run(stop_event)
-    sys.exit()
 
 
 class RunningProcess:
