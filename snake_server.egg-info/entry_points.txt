@@ -1,2 +1,0 @@
-[console_scripts]
-run-snake-server = snake_server.main:main

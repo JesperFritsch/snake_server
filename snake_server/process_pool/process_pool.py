@@ -25,8 +25,7 @@ class RunningProcess:
         self.future = future
         self.stop_event = stop_event
 
-    def cancel(self):
-        self.future.cancel()
+    def stop(self):
         self.stop_event.set()
 
     def is_done(self):
@@ -86,12 +85,13 @@ class SnakeProcessPool(metaclass=SingletonMeta):
 
     def finish_proc(self, run_id: str):
         if run_id in self._running_processes:
-            self._running_processes[run_id].cancel()
+            self._running_processes[run_id].stop()
             del self._running_processes[run_id]
         try:
             source_manager.finish_live_source(run_id, store=False)
         except ValueError:
             log.warning(f"Could not store source with id {run_id}")
+        log.debug("Finished process with id:", run_id)
 
     async def shutdown(self):
         try:
