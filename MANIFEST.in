@@ -1,1 +1,2 @@
-include snake_server/static/*
+include snake_server/config.ini
+recursive-include snake_server/static *
