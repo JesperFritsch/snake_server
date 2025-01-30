@@ -1,5 +1,7 @@
 import logging
 import asyncio
+from configparser import ConfigParser
+from importlib import resources
 from pathlib import Path
 from typing import Dict
 from concurrent.futures import ProcessPoolExecutor, Future
@@ -13,6 +15,10 @@ from snake_sim.utils import DotDict
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_source.loop_source import AsyncIPCLoopSource
 from snake_server.utils import SingletonMeta
+
+config = ConfigParser()
+with resources.open_text('snake_server', 'config.ini') as config_file:
+    config.read_file(config_file)
 
 log = logging.getLogger(Path(__file__).stem)
 
@@ -88,7 +94,8 @@ class SnakeProcessPool(metaclass=SingletonMeta):
             self._running_processes[run_id].stop()
             del self._running_processes[run_id]
         try:
-            source_manager.finish_live_source(run_id, store=False)
+            store_source = config.getboolean('runs', 'store_runs')
+            source_manager.finish_live_source(run_id, store=store_source)
         except ValueError:
             log.warning(f"Could not store source with id {run_id}")
         log.debug("Finished process with id: %s", run_id)

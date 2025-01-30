@@ -1,12 +1,19 @@
 import logging
 import asyncio
 from pathlib import Path
+from configparser import ConfigParser
+from importlib import resources
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect, WebSocketState
 
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_handler.data_stream_handler import DataStreamHandler
+
+config = ConfigParser()
+
+with resources.open_text('snake_server.config', 'config.ini') as config_file:
+    config.read_file(config_file)
 
 log = logging.getLogger(Path(__file__).stem)
 
@@ -45,3 +52,5 @@ async def start_stream(websocket: WebSocket, run_id: str):
                 await websocket.close()
             except RuntimeError as e:
                 pass
+        if config.getboolean('snake_process', 'cleanup_on_disconnect'):
+            source_manager.finish_live_source(run_id)
