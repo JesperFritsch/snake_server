@@ -25,6 +25,6 @@ def cli(sys_argv):
     parser.add_argument(
         "--log-level",
         type=log_level_type,
-        default="INFO",
+        default="DEBUG",
         help=f"Set the log level for the server: ({', '.join(LOG_LEVELS.keys())})",)
     return parser.parse_args(sys_argv)

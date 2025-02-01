@@ -37,11 +37,11 @@ app.include_router(api_routes.router, prefix="/api", tags=["API"])
 app.include_router(navigation_routes.router, tags=["NAVIGATION"])
 app.include_router(websocket_routes.router, prefix="/ws", tags=["WEBSOCKET"])
 configure_static_files(app)
-setup_loggers(logging.DEBUG)
 
 
 def main():
     args = cli(sys.argv[1:])
+    setup_loggers(args.log_level)
     try:
         uvicorn.run("snake_server.main:app", host=args.host, port=args.port, reload=args.dev)
     except KeyboardInterrupt:

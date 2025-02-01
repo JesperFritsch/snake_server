@@ -136,3 +136,4 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         except Exception as e:
             log.error(f"Error shutting down process pool: {e}")
             log.debug("TRACEBACK", exc_info=True)
+            raise e
