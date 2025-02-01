@@ -1,21 +1,23 @@
 import logging
 import asyncio
 import atexit
-import sys
+import multiprocessing
 
 from configparser import ConfigParser
 from importlib import resources
 from pathlib import Path
 from typing import Dict
-from concurrent.futures import ProcessPoolExecutor, Future
-from multiprocessing import Pipe, Manager
+from multiprocessing import Pipe
 from uuid import uuid4
 
 from snake_sim.loop_observers.ipc_run_data_observer import IPCRunDataObserver
+from snake_sim.environment.snake_loop_control import setup_loop
+from snake_sim.utils import DotDict
 
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_source.loop_source import AsyncIPCLoopSource
 from snake_server.utils import SingletonMeta
+
 
 config = ConfigParser()
 with open(resources.files('snake_server').joinpath('config.ini')) as config_file:
@@ -31,41 +33,37 @@ def start_snake_run(config: dict, observer: AsyncIPCLoopSource, stop_event) -> s
     Function to run in a separate process
     we need this intermediate function to reset the singeltons.
     """
-    from snake_sim.environment.snake_loop_control import setup_loop
-    from snake_sim.utils import DotDict, SingletonMeta
-    SingletonMeta.reset()
     loop_control = setup_loop(DotDict(config))
     loop_control.add_run_data_observer(observer)
     loop_control.run(stop_event)
 
 
 class RunningProcess:
-    def __init__(self, run_id: str, future: Future, stop_event):
+    def __init__(self, run_id: str, process: multiprocessing.Process):
         self.run_id = run_id
-        self.future = future
-        self.stop_event = stop_event
+        self.process = process
 
     def stop(self):
-        self.stop_event.set()
+        log.debug("Terminating process with id: %s", self.run_id)
+        self.process.terminate()
+        self.process.join()
+        self.check_result()
 
     def is_done(self):
-        return self.future.done()
+        return not self.process.is_alive()
 
     def check_result(self):
         if self.is_done():
-            try:
-                self.future.result()
-            except Exception as e:
-                log.error(f"Error in process with id {self.run_id}: {e}")
+            if self.process.exitcode != 0:
+                log.error(f"Error in process with id {self.run_id}: Exit code {self.process.exitcode}")
                 log.debug("TRACEBACK", exc_info=True)
 
 
 class SnakeProcessPool(metaclass=SingletonMeta):
     def __init__(self):
-        self._process_pool = ProcessPoolExecutor()
         self._running_processes: Dict[str, RunningProcess] = {}
         self._monitor_task = None
-        self._manager = Manager()
+        self._manager = multiprocessing.Manager()
 
         atexit.register(self.shutdown_sync)
 
@@ -100,15 +98,17 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         run_id = str(uuid4())
         child_pipe, pipe = Pipe()
         observer = IPCRunDataObserver(child_pipe)
+        loop_control = setup_loop(DotDict(config))
+        loop_control.add_run_data_observer(observer)
         loop_source = AsyncIPCLoopSource(pipe, config)
         source_manager.add_source(run_id, loop_source)
-        self._submit(start_snake_run, run_id, config, observer)
+        self._submit(loop_control.run, run_id)
         return run_id
 
-    def _submit(self, func, run_id: str, config: dict, observer: AsyncIPCLoopSource):
-        stop_event = self._manager.Event()
-        future = self._process_pool.submit(func, config, observer, stop_event)
-        self._running_processes[run_id] = RunningProcess(run_id, future, stop_event)
+    def _submit(self, func, run_id: str):
+        process = multiprocessing.Process(target=func)
+        process.start()
+        self._running_processes[run_id] = RunningProcess(run_id, process)
 
     def finish_proc(self, run_id: str):
         if run_id in self._running_processes:
@@ -133,7 +133,6 @@ class SnakeProcessPool(metaclass=SingletonMeta):
                     await self._monitor_task
                 except asyncio.CancelledError:
                     pass
-            self._process_pool.shutdown(wait=True) # wait=True means that the pool will wait for all processes to finish before shutting down
         except Exception as e:
             log.error(f"Error shutting down process pool: {e}")
             log.debug("TRACEBACK", exc_info=True)
