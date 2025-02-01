@@ -17,6 +17,7 @@ from snake_sim.utils import DotDict
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_source.loop_source import AsyncIPCLoopSource
 from snake_server.utils import SingletonMeta
+from snake_server.logging import setup_loggers
 
 
 config = ConfigParser()
@@ -28,14 +29,13 @@ log = logging.getLogger(Path(__file__).stem)
 # Singleton class to manage running processes
 source_manager = StreamSourceManager()
 
-def start_snake_run(config: dict, observer: AsyncIPCLoopSource, stop_event) -> str:
+def start_snake_run(loop_control, log_level):
     """
     Function to run in a separate process
     we need this intermediate function to reset the singeltons.
     """
-    loop_control = setup_loop(DotDict(config))
-    loop_control.add_run_data_observer(observer)
-    loop_control.run(stop_event)
+    setup_loggers(log_level)
+    loop_control.run()
 
 
 class RunningProcess:
@@ -102,11 +102,11 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         loop_control.add_run_data_observer(observer)
         loop_source = AsyncIPCLoopSource(pipe, config)
         source_manager.add_source(run_id, loop_source)
-        self._submit(loop_control.run, run_id)
+        self._submit(start_snake_run, loop_control, run_id)
         return run_id
 
-    def _submit(self, func, run_id: str):
-        process = multiprocessing.Process(target=func)
+    def _submit(self, func, loop_control, run_id: str):
+        process = multiprocessing.Process(target=func, args=(loop_control, log.level))
         process.start()
         self._running_processes[run_id] = RunningProcess(run_id, process)
 
