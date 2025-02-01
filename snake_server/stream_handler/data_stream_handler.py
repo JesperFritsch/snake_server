@@ -121,6 +121,8 @@ class DataStreamHandler:
         self._waiting_requests.append(WaitingRequest(req=req, start_step=start_step))
 
     async def async_ws_wrapper(self, coroutine, *args, **kwargs):
+        if getattr(self, "_is_canceling", False):
+            return
         try:
             return await coroutine(*args, **kwargs)
         except WebSocketDisconnect:
@@ -316,7 +318,7 @@ class DataStreamHandler:
         return processable_requests
 
     async def _request_listener(self):
-        while self.websocket.client_state == WebSocketState.CONNECTED:
+        while self.websocket.client_state == WebSocketState.CONNECTED and self.websocket.application_state == WebSocketState.CONNECTED:
             try:
                 req = await asyncio.wait_for(self.websocket.receive_bytes(), timeout=self._yield_time)
                 if req == b'ping':
@@ -331,7 +333,7 @@ class DataStreamHandler:
         await self.async_ws_wrapper(self._request_listener)
 
     async def _msg_pusher(self):
-        while True:
+        while self.websocket.client_state == WebSocketState.CONNECTED and self.websocket.application_state == WebSocketState.CONNECTED:
             try:
                 if self._msg_out_buffer:
                     msg = self._msg_out_buffer.popleft()
@@ -361,7 +363,7 @@ class DataStreamHandler:
 
     async def _heartbeat(self):
         try:
-            while self.websocket.client_state == WebSocketState.CONNECTED:
+            while self.websocket.client_state == WebSocketState.CONNECTED and self.websocket.application_state == WebSocketState.CONNECTED:
                 await asyncio.sleep(0.5)
                 await self.websocket.send_text('ping')
         except asyncio.CancelledError:
