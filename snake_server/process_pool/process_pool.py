@@ -47,16 +47,9 @@ class RunningProcess:
         log.debug("Terminating process with id: %s", self.run_id)
         self.process.terminate()
         self.process.join()
-        self.check_result()
 
     def is_done(self):
         return not self.process.is_alive()
-
-    def check_result(self):
-        if self.is_done():
-            if self.process.exitcode != 0:
-                log.error(f"Error in process with id {self.run_id}: Exit code {self.process.exitcode}")
-                log.debug("TRACEBACK", exc_info=True)
 
 
 class SnakeProcessPool(metaclass=SingletonMeta):
@@ -91,7 +84,6 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         running_processes = self._running_processes.copy()
         for run_id, process in running_processes.items():
             if process.is_done():
-                process.check_result()
                 self.finish_proc(run_id)
 
     def start_run(self, config: dict):

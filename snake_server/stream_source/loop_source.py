@@ -85,9 +85,9 @@ class AsyncIPCLoopSource(ILiveStreamSource):
                 self._last_recieved_step = step_data.step
                 self._run_data.add_step(step_data)
         except (BrokenPipeError, EOFError, OSError):
-            print("Connection to process lost.")
+            log.error("Connection to process lost.")
             # print("TRACEBACK", exc_info=True)
         except asyncio.CancelledError:
-            print("Recieve task canceled.")
+            pass
         finally:
             self._is_done = True
