@@ -122,17 +122,18 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         log.debug("Finished process with id: %s", run_id)
 
     async def shutdown(self):
+        log.debug("Shutting down process pool")
         try:
             for run_id in self._running_processes.copy():
                 self.finish_proc(run_id)
             source_manager.cleanup()
-            self._process_pool.shutdown(wait=False) # wait=True means that the pool will wait for all processes to finish before shutting down
             if self._monitor_task:
                 self._monitor_task.cancel()
                 try:
                     await self._monitor_task
                 except asyncio.CancelledError:
                     pass
+            self._process_pool.shutdown(wait=True) # wait=True means that the pool will wait for all processes to finish before shutting down
         except Exception as e:
             log.error(f"Error shutting down process pool: {e}")
             log.debug("TRACEBACK", exc_info=True)

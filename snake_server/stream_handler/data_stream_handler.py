@@ -124,7 +124,7 @@ class DataStreamHandler:
         try:
             return await coroutine(*args, **kwargs)
         except WebSocketDisconnect:
-            log.debug(f"Websocket disconnected for stream för faan: {self.websocket}")
+            log.debug(f"Websocket disconnected for stream: {self.stream_id}")
             if not getattr(self, "_is_canceling", False):
                 await self.cancel()
         except Exception as e:
