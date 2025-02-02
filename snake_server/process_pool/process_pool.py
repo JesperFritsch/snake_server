@@ -2,6 +2,7 @@ import logging
 import asyncio
 import atexit
 import multiprocessing
+import threading
 
 from configparser import ConfigParser
 from importlib import resources
@@ -29,24 +30,29 @@ log = logging.getLogger(Path(__file__).stem)
 # Singleton class to manage running processes
 source_manager = StreamSourceManager()
 
-def start_snake_run(loop_control, log_level):
+def start_snake_run(loop_control, log_level, stop_event):
     """
     Function to run in a separate process
-    we need this intermediate function to reset the singeltons.
+    set up logging and run the loop in the process
     """
     setup_loggers(log_level)
-    loop_control.run()
+    loop_control.run(stop_event)
 
 
 class RunningProcess:
-    def __init__(self, run_id: str, process: multiprocessing.Process):
+    def __init__(self, run_id: str, process: multiprocessing.Process, stop_event: threading.Event):
         self.run_id = run_id
         self.process = process
+        self.stop_event = stop_event
 
     def stop(self):
         log.debug("Terminating process with id: %s", self.run_id)
-        self.process.terminate()
-        self.process.join()
+        if self.stop_event:
+            self.stop_event.set()
+        else:
+            log.warning("No stop event found for process with id: %s, sending SIGTERM", self.run_id)
+            self.process.terminate()
+            self.process.join()
 
     def is_done(self):
         return not self.process.is_alive()
@@ -98,9 +104,10 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         return run_id
 
     def _submit(self, func, loop_control, run_id: str):
-        process = multiprocessing.Process(target=func, args=(loop_control, log.level))
+        stop_event = self._manager.Event()
+        process = multiprocessing.Process(target=func, args=(loop_control, log.level, stop_event))
         process.start()
-        self._running_processes[run_id] = RunningProcess(run_id, process)
+        self._running_processes[run_id] = RunningProcess(run_id, process, stop_event)
 
     def finish_proc(self, run_id: str):
         if run_id in self._running_processes:
