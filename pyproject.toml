@@ -19,8 +19,8 @@ dependencies = [
     "websockets",
     "requests",
     "grpcio",
-    "snake_proto_template @ git+https://github.com/jalopnis/snake_proto_template.git@main",
-    "snake_sim @ git+https://github.com/jalopnis/snake_sim.git@dependency",
+    "snake_proto_template @ git+ssh://git@github.com/jalopnis/snake_proto_template.git@main",
+    "snake_sim @ git+ssh://git@github.com/jalopnis/snake_sim.git@dependency",
 ]
 
 [project.scripts]
