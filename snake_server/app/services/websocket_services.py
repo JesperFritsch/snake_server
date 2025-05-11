@@ -42,11 +42,10 @@ async def start_stream(websocket: WebSocket, run_id: str):
                 await data_stream_task
             except asyncio.CancelledError:
                 pass
-        if websocket.client_state == WebSocketState.CONNECTED:
-            try:
-                await websocket.close()
-            except RuntimeError as e:
-                pass
+        try:
+            await websocket.close()
+        except RuntimeError as e:
+            pass
         if config.getboolean('snake_process', 'cleanup_on_disconnect'):
             log.debug(f"Stopping source: {run_id}")
             process_pool.finish_proc(run_id)
