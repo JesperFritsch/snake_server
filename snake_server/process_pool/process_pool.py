@@ -101,6 +101,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         loop_source = AsyncIPCLoopSource(pipe, config)
         source_manager.add_source(run_id, loop_source)
         self._submit(start_snake_run, loop_control, run_id)
+        observer.close() # close the pipe in the parent process
         return run_id
 
     def _submit(self, func, loop_control, run_id: str):
