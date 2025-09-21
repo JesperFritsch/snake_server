@@ -1,0 +1,228 @@
+2025-09-21 11:16:46,097:shm_snake_server-ipc:///tmp/snake_process_8XOXR7RE.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_8XOXR7RE.sock
+2025-09-21 11:16:46,097:shm_snake_server-ipc:///tmp/snake_process_8XOXR7RE.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:16:46,098:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 11:16:46,098:process_pool:DEBUG: Shutting down process pool
+2025-09-21 11:40:13,715:shm_snake_server-ipc:///tmp/snake_process_EDFO56E4.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_EDFO56E4.sock
+2025-09-21 11:40:13,716:shm_snake_server-ipc:///tmp/snake_process_EDFO56E4.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:40:13,717:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 11:40:13,717:process_pool:DEBUG: Shutting down process pool
+2025-09-21 11:40:50,095:shm_snake_server-ipc:///tmp/snake_process_VCQLPQYP.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_VCQLPQYP.sock
+2025-09-21 11:40:50,096:shm_snake_server-ipc:///tmp/snake_process_VCQLPQYP.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:40:50,100:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 11:40:50,101:process_pool:DEBUG: Shutting down process pool
+2025-09-21 11:45:32,805:shm_snake_server-ipc:///tmp/snake_process_UPAQSVOQ.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_UPAQSVOQ.sock
+2025-09-21 11:45:32,806:shm_snake_server-ipc:///tmp/snake_process_UPAQSVOQ.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:45:32,807:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 11:45:32,807:process_pool:DEBUG: Shutting down process pool
+2025-09-21 11:48:45,643:SHMProxySnake-ipc:///tmp/snake_process_I8NRPLME.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:45,644:shm_snake_server-ipc:///tmp/snake_process_I8NRPLME.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_I8NRPLME.sock
+2025-09-21 11:48:45,772:SHMProxySnake-ipc:///tmp/snake_process_I8NRPLME.sock:DEBUG: Connection established.
+2025-09-21 11:48:45,794:SHMProxySnake-ipc:///tmp/snake_process_COQI27ES.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:45,797:shm_snake_server-ipc:///tmp/snake_process_COQI27ES.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_COQI27ES.sock
+2025-09-21 11:48:45,980:SHMProxySnake-ipc:///tmp/snake_process_COQI27ES.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,000:SHMProxySnake-ipc:///tmp/snake_process_SNOIB7D2.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:46,004:shm_snake_server-ipc:///tmp/snake_process_SNOIB7D2.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_SNOIB7D2.sock
+2025-09-21 11:48:46,111:SHMProxySnake-ipc:///tmp/snake_process_SNOIB7D2.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,133:SHMProxySnake-ipc:///tmp/snake_process_TKRX5882.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:46,138:shm_snake_server-ipc:///tmp/snake_process_TKRX5882.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_TKRX5882.sock
+2025-09-21 11:48:46,297:SHMProxySnake-ipc:///tmp/snake_process_TKRX5882.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,334:SHMProxySnake-ipc:///tmp/snake_process_KH6P31YK.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:46,334:shm_snake_server-ipc:///tmp/snake_process_KH6P31YK.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_KH6P31YK.sock
+2025-09-21 11:48:46,494:SHMProxySnake-ipc:///tmp/snake_process_KH6P31YK.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,510:SHMProxySnake-ipc:///tmp/snake_process_AHLOFM7X.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:46,512:shm_snake_server-ipc:///tmp/snake_process_AHLOFM7X.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_AHLOFM7X.sock
+2025-09-21 11:48:46,624:SHMProxySnake-ipc:///tmp/snake_process_AHLOFM7X.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,629:SHMProxySnake-ipc:///tmp/snake_process_XU835JBI.sock:DEBUG: Waiting for connection to be established...
+2025-09-21 11:48:46,630:shm_snake_server-ipc:///tmp/snake_process_XU835JBI.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_XU835JBI.sock
+2025-09-21 11:48:46,739:SHMProxySnake-ipc:///tmp/snake_process_XU835JBI.sock:DEBUG: Connection established.
+2025-09-21 11:48:46,749:snake_loop_control:DEBUG: Snake 0 start position: Coord(x=16, y=7)
+2025-09-21 11:48:46,750:snake_loop_control:DEBUG: Snake 1 start position: Coord(x=7, y=18)
+2025-09-21 11:48:46,751:snake_loop_control:DEBUG: Snake 2 start position: Coord(x=25, y=5)
+2025-09-21 11:48:46,752:snake_loop_control:DEBUG: Snake 3 start position: Coord(x=4, y=30)
+2025-09-21 11:48:46,753:snake_loop_control:DEBUG: Snake 4 start position: Coord(x=3, y=6)
+2025-09-21 11:48:46,754:snake_loop_control:DEBUG: Snake 5 start position: Coord(x=3, y=4)
+2025-09-21 11:48:46,755:snake_loop_control:DEBUG: Snake 6 start position: Coord(x=25, y=28)
+2025-09-21 11:48:46,760:snake_handlers:DEBUG: Finalizing these updaters (SHMUpdater)
+2025-09-21 11:48:46,761:snake_updater_interface:DEBUG: Finalizing updater SHMUpdater 140249551061456 with 7 snakes
+2025-09-21 11:48:46,761:concurrent_updater:DEBUG: Creating ThreadPoolExecutor with 7 workers
+2025-09-21 11:48:46,761:shm_updater:DEBUG: Creating SharedMemoryWriter with name: 238a0482-35a5-4e22-b2b4-c6c7443b8123, readers: 7, payload_size: 1024
+2025-09-21 11:48:46,767:main_loop:DEBUG: Loop started
+2025-09-21 11:48:47,591:snake_handlers:DEBUG: Killing snake with id 4
+2025-09-21 11:48:47,591:snake_processes:DEBUG: Stopping SnakeProcess(id=4, pid=236029, target=ipc:///tmp/snake_process_KH6P31YK.sock, running=True)
+2025-09-21 11:48:47,591:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=4, pid=236029, target=ipc:///tmp/snake_process_KH6P31YK.sock, running=True)
+2025-09-21 11:48:47,592:snake_processes:DEBUG: Joining process SnakeProcess(id=4, pid=236029, target=ipc:///tmp/snake_process_KH6P31YK.sock, running=True)
+2025-09-21 11:48:47,641:shm_snake_server-ipc:///tmp/snake_process_KH6P31YK.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:47,642:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236029
+2025-09-21 11:48:47,645:snake_processes:DEBUG: Process with SnakeProcess(id=4, pid=236029, target=ipc:///tmp/snake_process_KH6P31YK.sock, running=False) stopped
+2025-09-21 11:48:47,695:snake_handlers:DEBUG: Killing snake with id 0
+2025-09-21 11:48:47,695:snake_processes:DEBUG: Stopping SnakeProcess(id=0, pid=236009, target=ipc:///tmp/snake_process_I8NRPLME.sock, running=True)
+2025-09-21 11:48:47,695:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=0, pid=236009, target=ipc:///tmp/snake_process_I8NRPLME.sock, running=True)
+2025-09-21 11:48:47,695:snake_processes:DEBUG: Joining process SnakeProcess(id=0, pid=236009, target=ipc:///tmp/snake_process_I8NRPLME.sock, running=True)
+2025-09-21 11:48:47,743:shm_snake_server-ipc:///tmp/snake_process_I8NRPLME.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:47,744:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236009
+2025-09-21 11:48:47,747:snake_processes:DEBUG: Process with SnakeProcess(id=0, pid=236009, target=ipc:///tmp/snake_process_I8NRPLME.sock, running=False) stopped
+2025-09-21 11:48:47,849:snake_handlers:DEBUG: Killing snake with id 5
+2025-09-21 11:48:47,849:snake_processes:DEBUG: Stopping SnakeProcess(id=5, pid=236034, target=ipc:///tmp/snake_process_AHLOFM7X.sock, running=True)
+2025-09-21 11:48:47,849:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=5, pid=236034, target=ipc:///tmp/snake_process_AHLOFM7X.sock, running=True)
+2025-09-21 11:48:47,849:snake_processes:DEBUG: Joining process SnakeProcess(id=5, pid=236034, target=ipc:///tmp/snake_process_AHLOFM7X.sock, running=True)
+2025-09-21 11:48:47,898:shm_snake_server-ipc:///tmp/snake_process_AHLOFM7X.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:47,899:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236034
+2025-09-21 11:48:47,901:snake_processes:DEBUG: Process with SnakeProcess(id=5, pid=236034, target=ipc:///tmp/snake_process_AHLOFM7X.sock, running=False) stopped
+2025-09-21 11:48:48,140:snake_handlers:DEBUG: Killing snake with id 2
+2025-09-21 11:48:48,140:snake_processes:DEBUG: Stopping SnakeProcess(id=2, pid=236019, target=ipc:///tmp/snake_process_SNOIB7D2.sock, running=True)
+2025-09-21 11:48:48,141:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=2, pid=236019, target=ipc:///tmp/snake_process_SNOIB7D2.sock, running=True)
+2025-09-21 11:48:48,141:snake_processes:DEBUG: Joining process SnakeProcess(id=2, pid=236019, target=ipc:///tmp/snake_process_SNOIB7D2.sock, running=True)
+2025-09-21 11:48:48,190:shm_snake_server-ipc:///tmp/snake_process_SNOIB7D2.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:48,191:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236019
+2025-09-21 11:48:48,194:snake_processes:DEBUG: Process with SnakeProcess(id=2, pid=236019, target=ipc:///tmp/snake_process_SNOIB7D2.sock, running=False) stopped
+2025-09-21 11:48:49,041:snake_handlers:DEBUG: Killing snake with id 3
+2025-09-21 11:48:49,041:snake_processes:DEBUG: Stopping SnakeProcess(id=3, pid=236024, target=ipc:///tmp/snake_process_TKRX5882.sock, running=True)
+2025-09-21 11:48:49,041:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=3, pid=236024, target=ipc:///tmp/snake_process_TKRX5882.sock, running=True)
+2025-09-21 11:48:49,041:snake_processes:DEBUG: Joining process SnakeProcess(id=3, pid=236024, target=ipc:///tmp/snake_process_TKRX5882.sock, running=True)
+2025-09-21 11:48:49,090:shm_snake_server-ipc:///tmp/snake_process_TKRX5882.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:49,091:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236024
+2025-09-21 11:48:49,095:snake_processes:DEBUG: Process with SnakeProcess(id=3, pid=236024, target=ipc:///tmp/snake_process_TKRX5882.sock, running=False) stopped
+2025-09-21 11:48:49,484:snake_handlers:DEBUG: Killing snake with id 6
+2025-09-21 11:48:49,484:snake_processes:DEBUG: Stopping SnakeProcess(id=6, pid=236040, target=ipc:///tmp/snake_process_XU835JBI.sock, running=True)
+2025-09-21 11:48:49,486:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=6, pid=236040, target=ipc:///tmp/snake_process_XU835JBI.sock, running=True)
+2025-09-21 11:48:49,486:snake_processes:DEBUG: Joining process SnakeProcess(id=6, pid=236040, target=ipc:///tmp/snake_process_XU835JBI.sock, running=True)
+2025-09-21 11:48:49,534:shm_snake_server-ipc:///tmp/snake_process_XU835JBI.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:49,535:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236040
+2025-09-21 11:48:49,538:snake_processes:DEBUG: Process with SnakeProcess(id=6, pid=236040, target=ipc:///tmp/snake_process_XU835JBI.sock, running=False) stopped
+2025-09-21 11:48:50,387:snake_loop_control:DEBUG: Stop event set, stopping loop
+2025-09-21 11:48:50,388:main_loop:DEBUG: Loop ended
+2025-09-21 11:48:50,442:ipc_run_data_observer:DEBUG: Sending stopped signal
+2025-09-21 11:48:50,443:snake_loop_control:DEBUG: Shutting down loop
+2025-09-21 11:48:50,443:snake_handlers:DEBUG: Closing SnakeHandler
+2025-09-21 11:48:50,443:shm_update:DEBUG: SharedMemoryWriter.cleanup name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236006
+2025-09-21 11:48:50,443:shm_update:DEBUG: SharedMemoryWriter.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236006
+2025-09-21 11:48:50,443:shm_update:DEBUG: SharedMemoryWriter.unlink succeeded name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236006
+2025-09-21 11:48:50,444:snake_updater_interface:DEBUG: Closing updater SHMUpdater 140249551061456
+2025-09-21 11:48:50,444:snake_processes:DEBUG: Shutting down processes
+2025-09-21 11:48:50,444:snake_processes:DEBUG: Stopping SnakeProcess(id=1, pid=236014, target=ipc:///tmp/snake_process_COQI27ES.sock, running=True)
+2025-09-21 11:48:50,445:snake_processes:DEBUG: Setting stop event for SnakeProcess(id=1, pid=236014, target=ipc:///tmp/snake_process_COQI27ES.sock, running=True)
+2025-09-21 11:48:50,445:snake_processes:DEBUG: Joining process SnakeProcess(id=1, pid=236014, target=ipc:///tmp/snake_process_COQI27ES.sock, running=True)
+2025-09-21 11:48:50,449:ipc_run_data_observer:DEBUG: Pipe broken: handle is closed
+2025-09-21 11:48:50,488:shm_snake_server-ipc:///tmp/snake_process_COQI27ES.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:48:50,489:shm_update:DEBUG: SharedMemoryReader.close name=238a0482-35a5-4e22-b2b4-c6c7443b8123 pid=236014
+2025-09-21 11:48:50,492:snake_processes:DEBUG: Process with SnakeProcess(id=1, pid=236014, target=ipc:///tmp/snake_process_COQI27ES.sock, running=False) stopped
+2025-09-21 11:48:50,492:snake_processes:DEBUG: SnakeProcessManager shutdown complete
+2025-09-21 11:48:50,493:snake_loop_control:DEBUG: Loop shutdown complete
+2025-09-21 11:49:10,664:shm_snake_server-ipc:///tmp/snake_process_2ZRCXUDQ.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_2ZRCXUDQ.sock
+2025-09-21 11:49:10,664:shm_snake_server-ipc:///tmp/snake_process_2ZRCXUDQ.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 11:49:10,664:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 11:49:10,665:process_pool:DEBUG: Shutting down process pool
+2025-09-21 12:02:51,694:shm_snake_server-ipc:///tmp/snake_process_5QNOBMRG.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_5QNOBMRG.sock
+2025-09-21 12:02:51,694:shm_snake_server-ipc:///tmp/snake_process_5QNOBMRG.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 12:02:51,695:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 12:02:51,695:process_pool:DEBUG: Shutting down process pool
+2025-09-21 12:12:46,058:shm_snake_server-ipc:///tmp/snake_process_TCLV9OTC.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_TCLV9OTC.sock
+2025-09-21 12:12:46,059:shm_snake_server-ipc:///tmp/snake_process_TCLV9OTC.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 12:12:46,060:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 12:12:46,060:process_pool:DEBUG: Shutting down process pool
+2025-09-21 12:16:08,556:shm_snake_server-ipc:///tmp/snake_process_76DO7GJV.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_76DO7GJV.sock
+2025-09-21 12:16:08,557:shm_snake_server-ipc:///tmp/snake_process_76DO7GJV.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 12:16:08,566:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 12:16:08,566:process_pool:DEBUG: Shutting down process pool
+2025-09-21 12:19:03,288:shm_snake_server-ipc:///tmp/snake_process_4EZB4CHJ.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_4EZB4CHJ.sock
+2025-09-21 12:19:03,288:shm_snake_server-ipc:///tmp/snake_process_4EZB4CHJ.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 12:19:03,289:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 12:19:03,290:process_pool:DEBUG: Shutting down process pool
+2025-09-21 12:39:15,898:shm_snake_server-ipc:///tmp/snake_process_6XYIVFT9.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_6XYIVFT9.sock
+2025-09-21 12:39:25,718:shm_snake_server-ipc:///tmp/snake_process_6XYIVFT9.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 12:39:25,719:shm_update:DEBUG: SharedMemoryReader.close name=89aaed1e-5e29-4d7f-9bcd-c10ec697d641 pid=241153
+2025-09-21 12:39:25,719:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 12:39:25,719:process_pool:DEBUG: Shutting down process pool
+2025-09-21 13:12:08,838:shm_snake_server-ipc:///tmp/snake_process_9BFD75HL.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_9BFD75HL.sock
+2025-09-21 13:12:19,016:shm_snake_server-ipc:///tmp/snake_process_9BFD75HL.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:12:19,016:shm_update:DEBUG: SharedMemoryReader.close name=08e46c59-045d-4f88-a367-98ea77144087 pid=242135
+2025-09-21 13:12:19,018:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 13:12:19,019:process_pool:DEBUG: Shutting down process pool
+2025-09-21 13:17:20,614:shm_snake_server-ipc:///tmp/snake_process_2ZJML14V.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_2ZJML14V.sock
+2025-09-21 13:17:23,773:shm_snake_server-ipc:///tmp/snake_process_2ZJML14V.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:17:23,774:shm_update:DEBUG: SharedMemoryReader.close name=a634a5ff-a28d-4609-84cc-3ff419186f8c pid=242541
+2025-09-21 13:17:23,774:process_pool:DEBUG: Shutting down process pool (sync)
+2025-09-21 13:17:23,774:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 13:17:23,775:process_pool:DEBUG: Shutting down process pool
+2025-09-21 13:18:11,522:shm_snake_server-ipc:///tmp/snake_process_KMLNG1BS.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_KMLNG1BS.sock
+2025-09-21 13:18:17,030:shm_snake_server-ipc:///tmp/snake_process_KMLNG1BS.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:18:17,031:shm_update:DEBUG: SharedMemoryReader.close name=12edf874-56d2-497d-8623-5fb502a09629 pid=242619
+2025-09-21 13:18:17,031:process_pool:DEBUG: Shutting down process pool (sync)
+2025-09-21 13:18:17,032:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 13:18:17,032:process_pool:DEBUG: Shutting down process pool
+2025-09-21 13:18:27,880:shm_snake_server-ipc:///tmp/snake_process_Q0QQGP0Z.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_Q0QQGP0Z.sock
+2025-09-21 13:18:36,898:shm_snake_server-ipc:///tmp/snake_process_Q0QQGP0Z.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:18:36,898:shm_update:DEBUG: SharedMemoryReader.close name=fe8794cf-e926-463d-b6aa-598a18eb277c pid=242746
+2025-09-21 13:18:36,899:process_pool:DEBUG: Shutting down process pool (sync)
+2025-09-21 13:18:36,899:asyncio:DEBUG: Using selector: EpollSelector
+2025-09-21 13:18:36,899:process_pool:DEBUG: Shutting down process pool
+2025-09-21 13:26:14,413:shm_snake_server-ipc:///tmp/snake_process_ZM11QNMM.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_ZM11QNMM.sock
+2025-09-21 13:26:19,129:shm_snake_server-ipc:///tmp/snake_process_ZM11QNMM.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:26:19,130:shm_update:DEBUG: SharedMemoryReader.close name=54519808-31e7-4fb5-935d-ad05899a0eba pid=243092
+2025-09-21 13:50:42,170:shm_snake_server-ipc:///tmp/snake_process_TQ00UDVY.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_TQ00UDVY.sock
+2025-09-21 13:50:52,550:shm_snake_server-ipc:///tmp/snake_process_TQ00UDVY.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 13:50:52,551:shm_update:DEBUG: SharedMemoryReader.close name=462a1e5e-5073-4e92-a90f-6179587d6026 pid=243884
+2025-09-21 14:04:55,449:shm_snake_server-ipc:///tmp/snake_process_SEF1CXNC.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_SEF1CXNC.sock
+2025-09-21 14:05:07,340:shm_snake_server-ipc:///tmp/snake_process_SEF1CXNC.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:05:07,344:shm_update:DEBUG: SharedMemoryReader.close name=60011687-6d1a-468d-8513-c876c42c3639 pid=244369
+2025-09-21 14:06:45,914:shm_snake_server-ipc:///tmp/snake_process_J20VXC3Y.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_J20VXC3Y.sock
+2025-09-21 14:06:51,221:shm_snake_server-ipc:///tmp/snake_process_J20VXC3Y.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:06:51,221:shm_update:DEBUG: SharedMemoryReader.close name=e7e658de-0d78-49b1-9660-4cba6e8db632 pid=244597
+2025-09-21 14:10:24,945:shm_snake_server-ipc:///tmp/snake_process_TVFX93I3.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_TVFX93I3.sock
+2025-09-21 14:10:32,935:shm_snake_server-ipc:///tmp/snake_process_TVFX93I3.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:10:32,935:shm_update:DEBUG: SharedMemoryReader.close name=097e08be-3e91-45d9-8fd3-748a977bd591 pid=244998
+2025-09-21 14:12:55,094:shm_snake_server-ipc:///tmp/snake_process_OX372WEO.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_OX372WEO.sock
+2025-09-21 14:12:58,095:shm_snake_server-ipc:///tmp/snake_process_OX372WEO.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:12:58,096:shm_update:DEBUG: SharedMemoryReader.close name=55a3b880-ac8e-4cde-b3a5-abf61ad854f0 pid=245151
+2025-09-21 14:13:24,267:shm_snake_server-ipc:///tmp/snake_process_W0IR1WZR.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_W0IR1WZR.sock
+2025-09-21 14:13:27,808:shm_snake_server-ipc:///tmp/snake_process_W0IR1WZR.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:13:27,809:shm_update:DEBUG: SharedMemoryReader.close name=b354d0f8-f46f-4130-8ce5-2f087ebeb005 pid=245273
+2025-09-21 14:13:49,994:shm_snake_server-ipc:///tmp/snake_process_K0JHE8H1.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_K0JHE8H1.sock
+2025-09-21 14:13:50,493:shm_snake_server-ipc:///tmp/snake_process_K0JHE8H1.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:13:50,493:shm_update:DEBUG: SharedMemoryReader.close name=41ce9882-def9-4f1c-ad28-efc0068cccfa pid=245380
+2025-09-21 14:14:57,305:shm_snake_server-ipc:///tmp/snake_process_V4OU025T.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_V4OU025T.sock
+2025-09-21 14:15:09,720:shm_snake_server-ipc:///tmp/snake_process_V4OU025T.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:15:09,722:shm_update:DEBUG: SharedMemoryReader.close name=e187c917-1d36-4c66-9307-e77a306db2c3 pid=245508
+2025-09-21 14:16:50,244:shm_snake_server-ipc:///tmp/snake_process_XAPRN4ID.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_XAPRN4ID.sock
+2025-09-21 14:16:52,195:shm_update:DEBUG: SharedMemoryReader.close name=d666f8e7-f860-430b-9ee7-e183f5ef8d65 pid=245844
+2025-09-21 14:26:18,384:shm_snake_server-ipc:///tmp/snake_process_28NEKDH2.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_28NEKDH2.sock
+2025-09-21 14:26:27,334:shm_snake_server-ipc:///tmp/snake_process_28NEKDH2.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:26:27,335:shm_update:DEBUG: SharedMemoryReader.close name=1ee14eda-04b3-4961-9564-fcbe70815267 pid=246370
+2025-09-21 14:34:34,774:shm_snake_server-ipc:///tmp/snake_process_RC4YVJDZ.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_RC4YVJDZ.sock
+2025-09-21 14:34:46,188:shm_snake_server-ipc:///tmp/snake_process_RC4YVJDZ.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:34:46,189:shm_update:DEBUG: SharedMemoryReader.close name=0b6b94aa-c13a-4503-879c-f13446f49213 pid=246903
+2025-09-21 14:35:27,640:shm_snake_server-ipc:///tmp/snake_process_GR6MJY95.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_GR6MJY95.sock
+2025-09-21 14:35:30,591:shm_update:DEBUG: SharedMemoryReader.close name=471a35d8-bbd3-4a21-a60c-1674a4558613 pid=247150
+2025-09-21 14:37:35,041:shm_snake_server-ipc:///tmp/snake_process_H9E7VOAQ.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_H9E7VOAQ.sock
+2025-09-21 14:37:43,415:shm_snake_server-ipc:///tmp/snake_process_H9E7VOAQ.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:37:43,417:shm_update:DEBUG: SharedMemoryReader.close name=c10b6a4d-0bbd-4c63-b3d2-b91847931831 pid=247310
+2025-09-21 14:37:59,949:shm_snake_server-ipc:///tmp/snake_process_Q3YUCH9W.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_Q3YUCH9W.sock
+2025-09-21 14:38:12,043:shm_snake_server-ipc:///tmp/snake_process_Q3YUCH9W.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:38:12,044:shm_update:DEBUG: SharedMemoryReader.close name=0a6e670e-3f7a-4ef9-90fb-969c117c067a pid=247427
+2025-09-21 14:56:46,799:shm_snake_server-ipc:///tmp/snake_process_5S7N9V2W.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_5S7N9V2W.sock
+2025-09-21 14:56:51,680:shm_snake_server-ipc:///tmp/snake_process_5S7N9V2W.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 14:56:51,681:shm_update:DEBUG: SharedMemoryReader.close name=ebdf8829-ec87-4e27-820e-c984a6106868 pid=248526
+2025-09-21 15:08:31,651:shm_snake_server-ipc:///tmp/snake_process_3DOPQ3ZL.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_3DOPQ3ZL.sock
+2025-09-21 15:08:35,387:shm_snake_server-ipc:///tmp/snake_process_3DOPQ3ZL.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:08:35,394:shm_update:DEBUG: SharedMemoryReader.close name=dd103058-9e29-417b-9564-46aa58b37d1c pid=249020
+2025-09-21 15:08:53,057:shm_snake_server-ipc:///tmp/snake_process_2NNN32FM.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_2NNN32FM.sock
+2025-09-21 15:09:03,089:shm_snake_server-ipc:///tmp/snake_process_2NNN32FM.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:09:03,091:shm_update:DEBUG: SharedMemoryReader.close name=27ab1a16-d806-4d63-be65-d6c34586a2c3 pid=249156
+2025-09-21 15:11:31,785:shm_snake_server-ipc:///tmp/snake_process_0KB3FM6P.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_0KB3FM6P.sock
+2025-09-21 15:11:42,170:shm_snake_server-ipc:///tmp/snake_process_0KB3FM6P.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:11:42,171:shm_update:DEBUG: SharedMemoryReader.close name=6535ce80-51a5-434b-8c06-461ae0aa49ce pid=249490
+2025-09-21 15:12:50,564:shm_snake_server-ipc:///tmp/snake_process_ZIDGGXUM.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_ZIDGGXUM.sock
+2025-09-21 15:12:59,211:shm_snake_server-ipc:///tmp/snake_process_ZIDGGXUM.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:12:59,212:shm_update:DEBUG: SharedMemoryReader.close name=02582e28-b90f-4fd4-9d0b-62616477fd75 pid=249815
+2025-09-21 15:17:15,368:shm_snake_server-ipc:///tmp/snake_process_WZ6WEUC7.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_WZ6WEUC7.sock
+2025-09-21 15:17:26,340:shm_snake_server-ipc:///tmp/snake_process_WZ6WEUC7.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:17:26,341:shm_update:DEBUG: SharedMemoryReader.close name=a7c40a3a-6b35-484f-9364-6e47e2430a1b pid=250257
+2025-09-21 15:18:09,485:shm_snake_server-ipc:///tmp/snake_process_BZQ0OIQV.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_BZQ0OIQV.sock
+2025-09-21 15:18:21,738:shm_snake_server-ipc:///tmp/snake_process_BZQ0OIQV.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:18:21,760:shm_update:DEBUG: SharedMemoryReader.close name=2cf4749d-63be-4ca8-a14d-dfed0bf8b362 pid=250551
+2025-09-21 15:18:37,019:shm_snake_server-ipc:///tmp/snake_process_T4TINE1D.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_T4TINE1D.sock
+2025-09-21 15:18:44,265:shm_snake_server-ipc:///tmp/snake_process_T4TINE1D.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:18:44,266:shm_update:DEBUG: SharedMemoryReader.close name=2c53395b-b93b-41df-ba7f-a397da0b0e69 pid=250748
+2025-09-21 15:27:32,232:shm_snake_server-ipc:///tmp/snake_process_888IYYNK.sock:INFO: Starting SHM snake server on ipc:///tmp/snake_process_888IYYNK.sock
+2025-09-21 15:27:44,855:shm_snake_server-ipc:///tmp/snake_process_888IYYNK.sock:DEBUG: Stop event set, shutting down server
+2025-09-21 15:27:44,856:shm_update:DEBUG: SharedMemoryReader.close name=84380e0f-ab4b-4701-be62-1aa2dc71e03f pid=251389

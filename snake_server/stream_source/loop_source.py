@@ -58,6 +58,7 @@ class AsyncIPCLoopSource(ILiveStreamSource):
     def cancel(self):
         self._stop_event.set()
         self._recieve_task.cancel()
+        self._pipe.close()
 
     async def recieve_data(self):
         try:
@@ -90,4 +91,5 @@ class AsyncIPCLoopSource(ILiveStreamSource):
         except asyncio.CancelledError:
             pass
         finally:
+            self._pipe.close()
             self._is_done = True
