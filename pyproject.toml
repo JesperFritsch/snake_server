@@ -18,7 +18,8 @@ dependencies = [
     "numpy",
     "websockets",
     "requests",
-    "grpcio"
+    "grpcio",
+    "snake_sim @ git+ssh://git@github.com/JesperFritsch/snake_sim.git@master"
 ]
 
 [project.scripts]

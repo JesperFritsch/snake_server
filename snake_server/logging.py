@@ -4,8 +4,6 @@ from logging.handlers import RotatingFileHandler
 def setup_loggers(console_level=logging.INFO):
     default_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s: %(message)s')
     root_logger = logging.getLogger()
-    if root_logger.hasHandlers():
-        root_logger.handlers.clear()
     root_logger.setLevel(logging.DEBUG)
 
     # Console handler

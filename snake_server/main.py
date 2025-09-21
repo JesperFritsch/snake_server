@@ -19,6 +19,7 @@ log = logging.getLogger(Path(__file__).stem)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_loggers(log.level)
     pool = SnakeProcessPool()
     try:
         await pool.start_monitor()

@@ -13,6 +13,8 @@ async def request_run(run_config: RunRequest) -> RequestActionResponse:
     try:
         run_id = api_services.request_run(run_config.model_dump())
     except Exception as e:
+        import logging
+        logging.exception("Error requesting run")
         return RequestActionResponse(run_id=None, action="request_run", result="error")
     else:
         return RequestActionResponse(run_id=run_id, action="request_run", result="success")

@@ -367,7 +367,7 @@ class DataStreamHandler:
                 await asyncio.sleep(0.5)
                 await self.websocket.send_text('ping')
         except asyncio.CancelledError:
-            pass
+            log.debug("Heartbeat cancelled")
 
     async def heartbeat(self):
         await self.async_ws_wrapper(self._heartbeat)
@@ -389,6 +389,7 @@ class DataStreamHandler:
         self._is_canceling = True
 
     async def start(self):
+        log.info(f"DataStreamHandler started for {self.stream_id}")
         try:
             self.sub_tasks.add(asyncio.create_task(self.request_listener()))
             self.sub_tasks.add(asyncio.create_task(self.request_handler()))

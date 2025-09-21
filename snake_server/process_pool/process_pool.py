@@ -1,14 +1,13 @@
 import logging
 import asyncio
-import atexit
 import multiprocessing
-import threading
 
 from configparser import ConfigParser
 from importlib import resources
 from pathlib import Path
 from typing import Dict
 from multiprocessing import Pipe
+from multiprocessing.synchronize import Event as MPEvent
 from uuid import uuid4
 
 from snake_sim.loop_observers.ipc_run_data_observer import IPCRunDataObserver
@@ -30,29 +29,56 @@ log = logging.getLogger(Path(__file__).stem)
 # Singleton class to manage running processes
 source_manager = StreamSourceManager()
 
-def start_snake_run(loop_control, log_level, stop_event):
-    """
-    Function to run in a separate process
-    set up logging and run the loop in the process
-    """
-    setup_loggers(log_level)
+def start_snake_run(config: DotDict, stop_event: MPEvent, ipc_observer_pipe=None):
+    # in linux the process is forked and inherits the loggers, but on windows we need to set it up again
+    if not logging.getLogger().hasHandlers():
+        setup_loggers(log.level)
+    loop_control = setup_loop(config)
+    if ipc_observer_pipe:
+        loop_control.add_run_data_observer(IPCRunDataObserver(ipc_observer_pipe))
     loop_control.run(stop_event)
 
 
 class RunningProcess:
-    def __init__(self, run_id: str, process: multiprocessing.Process, stop_event: threading.Event):
+    def __init__(self, run_id: str, process: multiprocessing.Process, stop_event: MPEvent):
         self.run_id = run_id
         self.process = process
         self.stop_event = stop_event
 
     def stop(self):
         log.debug("Terminating process with id: %s", self.run_id)
+        if self.is_done():
+            log.debug("Process with id: %s is already terminated", self.run_id)
+            return
         if self.stop_event:
+            log.debug("Setting stop event for process with id: %s", self.run_id)
             self.stop_event.set()
+            # Wait for process to finish gracefully
+            log.debug("Waiting for process %s to terminate gracefully", self.run_id)
+            self.process.join(timeout=5)
+            if self.process.is_alive():
+                log.warning("Process %s didn't stop gracefully, terminating", self.run_id)
+                self.process.terminate()
+                self.process.join()
         else:
             log.warning("No stop event found for process with id: %s, sending SIGTERM", self.run_id)
             self.process.terminate()
             self.process.join()
+        log.debug("Process with id: %s terminated", self.run_id)
+
+    def cleanup(self):
+        """Clean up process resources"""
+        # Ensure process is fully terminated and resources are released
+        if self.process.is_alive():
+            log.warning("Process %s still alive during cleanup, force terminating", self.run_id)
+            self.process.terminate()
+            self.process.join(timeout=2)
+            if self.process.is_alive():
+                log.error("Process %s refusing to terminate", self.run_id)
+        
+        # Clear references to help garbage collection
+        self.stop_event = None
+        self.process = None
 
     def is_done(self):
         return not self.process.is_alive()
@@ -62,16 +88,28 @@ class SnakeProcessPool(metaclass=SingletonMeta):
     def __init__(self):
         self._running_processes: Dict[str, RunningProcess] = {}
         self._monitor_task = None
-        self._manager = multiprocessing.Manager()
-
-        atexit.register(self.shutdown_sync)
+        self._shutdown_called = False
 
     def shutdown_sync(self):
         """Ensures shutdown runs safely even in a sync environment."""
+        log.debug(f"Shutting down process pool (sync)")
+        if self._shutdown_called:
+            return
+        self._shutdown_called = True
         try:
             asyncio.run(self.shutdown())  # Runs async shutdown safely
         except RuntimeError:
-            pass  # Handles cases where the event loop is already closed
+            # If no event loop, do synchronous cleanup
+            self._sync_shutdown()
+
+    def _sync_shutdown(self):
+        """Synchronous shutdown fallback"""
+        log.debug("Performing synchronous shutdown")
+        for run_id in list(self._running_processes.keys()):
+            running_process = self._running_processes[run_id]
+            running_process.stop()
+            running_process.cleanup()
+            del self._running_processes[run_id]
 
     async def start_monitor(self):
         self._monitor_task = asyncio.create_task(self._monitor_processes())
@@ -95,23 +133,23 @@ class SnakeProcessPool(metaclass=SingletonMeta):
     def start_run(self, config: dict):
         run_id = str(uuid4())
         child_pipe, pipe = Pipe()
-        observer = IPCRunDataObserver(child_pipe)
-        loop_control = setup_loop(DotDict(config))
-        loop_control.add_run_data_observer(observer)
         loop_source = AsyncIPCLoopSource(pipe, config)
         source_manager.add_source(run_id, loop_source)
-        self._submit(start_snake_run, loop_control, run_id)
+        self._submit(start_snake_run, config, child_pipe, run_id)
         return run_id
 
-    def _submit(self, func, loop_control, run_id: str):
-        stop_event = self._manager.Event()
-        process = multiprocessing.Process(target=func, args=(loop_control, log.level, stop_event))
+    def _submit(self, func, config, ipc_observer_pipe, run_id: str):
+        stop_event = multiprocessing.Event()
+        process = multiprocessing.Process(target=func, args=(config, stop_event, ipc_observer_pipe))
         process.start()
         self._running_processes[run_id] = RunningProcess(run_id, process, stop_event)
 
     def finish_proc(self, run_id: str):
+        log.debug("Finishing process with id: %s", run_id)
         if run_id in self._running_processes:
-            self._running_processes[run_id].stop()
+            running_process = self._running_processes[run_id]
+            running_process.stop()
+            running_process.cleanup()
             del self._running_processes[run_id]
         try:
             store_source = config.getboolean('runs', 'store_runs')
@@ -123,15 +161,20 @@ class SnakeProcessPool(metaclass=SingletonMeta):
     async def shutdown(self):
         log.debug("Shutting down process pool")
         try:
-            for run_id in self._running_processes.copy():
-                self.finish_proc(run_id)
-            source_manager.cleanup()
+            # Stop monitor first to prevent new process checks
             if self._monitor_task:
                 self._monitor_task.cancel()
                 try:
                     await self._monitor_task
                 except asyncio.CancelledError:
                     pass
+            
+            # Clean up all running processes
+            for run_id in list(self._running_processes.keys()):
+                self.finish_proc(run_id)
+            
+            source_manager.cleanup()
+            
         except Exception as e:
             log.error(f"Error shutting down process pool: {e}")
             log.debug("TRACEBACK", exc_info=True)
