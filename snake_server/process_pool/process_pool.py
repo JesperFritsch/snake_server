@@ -130,10 +130,11 @@ class SnakeProcessPool(metaclass=SingletonMeta):
             if process.is_done():
                 self.finish_proc(run_id)
 
-    def start_run(self, config: dict):
+    def start_run(self, config: DotDict):
         run_id = str(uuid4())
         child_pipe, pipe = Pipe()
         loop_source = AsyncIPCLoopSource(pipe, config)
+        config.inproc_snakes = True
         source_manager.add_source(run_id, loop_source)
         self._submit(start_snake_run, config, child_pipe, run_id)
         return run_id
