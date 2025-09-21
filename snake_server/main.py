@@ -42,7 +42,6 @@ configure_static_files(app)
 
 def main():
     args = cli(sys.argv[1:])
-    setup_loggers(args.log_level)
     try:
         uvicorn.run("snake_server.main:app", host=args.host, port=args.port, reload=args.dev)
     except KeyboardInterrupt:
