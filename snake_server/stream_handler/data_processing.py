@@ -1,9 +1,9 @@
 import numpy as np
 
-from ast import List
+from typing import List, Tuple
 
 
-def get_diffs(old: np.ndarray, new: np.ndarray) -> List[tuple[int, int, int]]:
+def get_diffs(old: np.ndarray, new: np.ndarray) -> List[Tuple[int, int, int]]:
     """ Get the differences between two maps as a list of (x, y, value) tuples """
     diffs = []
     if old is None:
