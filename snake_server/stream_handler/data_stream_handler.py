@@ -189,7 +189,6 @@ class DataStreamHandler:
             req = self.split_request(req)
             if req is None:
                 return
-        self._stream_source.get_map(req.start_step)
         step_maps = self._stream_source.get_map_range(start=req.start_step, end=req.end_step)
         prev_map = None
         for i, s_maps in enumerate(step_maps):
