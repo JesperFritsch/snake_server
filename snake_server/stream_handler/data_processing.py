@@ -12,7 +12,7 @@ def get_diffs(old: np.ndarray, new: np.ndarray) -> List[Tuple[int, int, int]]:
         raise ValueError("Old and new maps must have the same shape to compute diffs")
     changed_positions = np.argwhere(old != new)
     for pos in changed_positions:
-        x, y = pos
+        y, x = pos
         diffs.append((x, y, int(new[x, y])))
     return diffs
 
