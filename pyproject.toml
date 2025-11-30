@@ -19,7 +19,8 @@ dependencies = [
     "websockets",
     "requests",
     "grpcio",
-    "snake_sim @ git+ssh://git@github.com/JesperFritsch/snake_sim.git@master"
+    "snake_sim @ git+ssh://git@github.com/JesperFritsch/snake_sim.git@master",
+    "snake_proto_template @ git+ssh://git@github.com/JesperFritsch/snake_proto_template.git@main"
 ]
 
 [project.scripts]

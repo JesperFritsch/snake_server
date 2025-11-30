@@ -1,18 +1,20 @@
 import logging
 import asyncio
-import multiprocessing
+import multiprocessing as mp
+import ctypes
+
 
 from configparser import ConfigParser
 from importlib import resources
 from pathlib import Path
 from typing import Dict
 from multiprocessing import Pipe
-from multiprocessing.synchronize import Event as MPEvent
+from multiprocessing.sharedctypes import Synchronized
 from uuid import uuid4
 
-from snake_sim.loop_observers.ipc_run_data_observer import IPCRunDataObserver
+from snake_sim.loop_observers.ipc_repeater_observer import IPCRepeaterObserver
 from snake_sim.environment.snake_loop_control import setup_loop
-from snake_sim.utils import DotDict
+from snake_sim.environment.types import DotDict
 
 from snake_server.source_manager.stream_source_manager import StreamSourceManager
 from snake_server.stream_source.loop_source import AsyncIPCLoopSource
@@ -29,18 +31,18 @@ log = logging.getLogger(Path(__file__).stem)
 # Singleton class to manage running processes
 source_manager = StreamSourceManager()
 
-def start_snake_run(config: DotDict, stop_event: MPEvent, ipc_observer_pipe=None):
+def start_snake_run(config: DotDict, stop_event: Synchronized, ipc_observer_pipe=None):
     # in linux the process is forked and inherits the loggers, but on windows we need to set it up again
     if not logging.getLogger().hasHandlers():
         setup_loggers(log.level)
     loop_control = setup_loop(config)
     if ipc_observer_pipe:
-        loop_control.add_run_data_observer(IPCRunDataObserver(ipc_observer_pipe))
+        loop_control.add_observer(IPCRepeaterObserver(ipc_observer_pipe))
     loop_control.run(stop_event)
 
 
 class RunningProcess:
-    def __init__(self, run_id: str, process: multiprocessing.Process, stop_event: MPEvent):
+    def __init__(self, run_id: str, process: mp.Process, stop_event: Synchronized):
         self.run_id = run_id
         self.process = process
         self.stop_event = stop_event
@@ -52,7 +54,7 @@ class RunningProcess:
             return
         if self.stop_event:
             log.debug("Setting stop event for process with id: %s", self.run_id)
-            self.stop_event.set()
+            self.stop_event.value = True
             # Wait for process to finish gracefully
             log.debug("Waiting for process %s to terminate gracefully", self.run_id)
             self.process.join(timeout=5)
@@ -89,6 +91,7 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         self._running_processes: Dict[str, RunningProcess] = {}
         self._monitor_task = None
         self._shutdown_called = False
+        self._mp_ctx = mp.get_context('spawn')
 
     def shutdown_sync(self):
         """Ensures shutdown runs safely even in a sync environment."""
@@ -140,8 +143,8 @@ class SnakeProcessPool(metaclass=SingletonMeta):
         return run_id
 
     def _submit(self, func, config, ipc_observer_pipe, run_id: str):
-        stop_event = multiprocessing.Event()
-        process = multiprocessing.Process(target=func, args=(config, stop_event, ipc_observer_pipe))
+        stop_event = self._mp_ctx.Value(ctypes.c_bool, False)  # Shared boolean value
+        process = self._mp_ctx.Process(target=func, args=(config, stop_event, ipc_observer_pipe))
         process.start()
         self._running_processes[run_id] = RunningProcess(run_id, process, stop_event)
 

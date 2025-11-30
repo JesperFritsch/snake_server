@@ -11,10 +11,15 @@ from google.protobuf.message import Message
 from dataclasses import dataclass
 
 from snake_server.stream_source.interfaces.stream_source_interface import IStreamSource
-from snake_sim.run_data.run_data import StepData, RunData
+from snake_server.stream_handler.proto_conversion import (
+    env_meta_data_to_proto,
+    create_pixel_change_proto_msg
+)
+from snake_server.stream_handler.data_processing import get_diffs, make_color_changes
+ 
+from snake_sim.render.utils import create_color_map
 
-from snake_sim.render.core import FrameBuilder
-from snake_sim.protobuf.sim_msgs_pb2 import (
+from snake_proto_template.python.sim_msgs_pb2 import (
     MsgWrapper,
     PixelChanges,
     StepPixelChanges,
@@ -22,9 +27,6 @@ from snake_sim.protobuf.sim_msgs_pb2 import (
     MessageType,
     Request,
     RequestType,
-    StepData as proto_step_data,
-    StepDataReq,
-    FullStepDataReq,
     PixelChangesReq,
     FullPixelChangesReq,
     RunMetaDataRequest,
@@ -38,8 +40,6 @@ log = logging.getLogger(__name__)
 def wrap_message(message) -> MsgWrapper:
     if isinstance(message, RunMetaData):
         msg_type = MessageType.RUN_META_DATA
-    elif isinstance(message, proto_step_data):
-        msg_type = MessageType.STEP_DATA
     elif isinstance(message, StepPixelChanges):
         msg_type = MessageType.PIXEL_CHANGES
     elif isinstance(message, RunUpdate):
@@ -55,15 +55,11 @@ def wrap_message(message) -> MsgWrapper:
     return wrapper_msg
 
 
-def unwrap_request(req: Request) -> Union[StepDataReq, PixelChangesReq, RunMetaDataRequest, FullStepDataReq, FullPixelChangesReq]:
-    if req.type == RequestType.STEP_DATA_REQ:
-        request = StepDataReq()
-    elif req.type == RequestType.PIXEL_CHANGES_REQ:
+def unwrap_request(req: Request) -> Union[PixelChangesReq, RunMetaDataRequest, FullPixelChangesReq]:
+    if req.type == RequestType.PIXEL_CHANGES_REQ:
         request = PixelChangesReq()
     elif req.type == RequestType.RUN_META_DATA_REQ:
         request = RunMetaDataRequest()
-    elif req.type == RequestType.FULL_STEP_DATA_REQ:
-        request = FullStepDataReq()
     elif req.type == RequestType.FULL_PIXEL_CHANGES_REQ:
         request = FullPixelChangesReq()
     else:
@@ -72,22 +68,9 @@ def unwrap_request(req: Request) -> Union[StepDataReq, PixelChangesReq, RunMetaD
     return request
 
 
-def create_pixel_change_proto_msg(change, full_state: Optional[bool] = False) -> PixelChanges:
-    payload = PixelChanges()
-    payload.full_state = full_state
-    for (x, y), color in change:
-        pixel = payload.pixels.add()
-        pixel.coord.x = x
-        pixel.coord.y = y
-        pixel.color.r = color[0]
-        pixel.color.g = color[1]
-        pixel.color.b = color[2]
-    return payload
-
-
 @dataclass(frozen=True)
 class WaitingRequest:
-    req: Union[StepDataReq, PixelChangesReq, FullStepDataReq, FullPixelChangesReq]
+    req: Union[PixelChangesReq, FullPixelChangesReq]
     start_step: int
 
 
@@ -97,25 +80,23 @@ class DataStreamHandler:
         self.websocket = websocket
         self._stream_source = stream_source
         self._yield_time = 0.005
-        self._frame_builder = None
         self._unhandled_requests: Deque[Request] = deque()
         self._waiting_requests: List[WaitingRequest] = []
         self._msg_out_buffer: Deque[Message] = deque()
         self.sub_tasks = set()
+        self._color_mapping: dict = None
 
     def add_request(
             self,
             req: Union[
-                StepDataReq,
                 PixelChangesReq,
                 RunMetaDataRequest,
-                FullStepDataReq,
                 FullPixelChangesReq
             ]
         ):
         self._unhandled_requests.append(req)
 
-    def add_waiting_request(self, start_step: int, req: Union[StepDataReq, PixelChangesReq, FullStepDataReq, FullPixelChangesReq]):
+    def add_waiting_request(self, start_step: int, req: Union[PixelChangesReq, FullPixelChangesReq]):
         if self._stream_source.is_done() and start_step > self.get_last_available_step():
             return
         self._waiting_requests.append(WaitingRequest(req=req, start_step=start_step))
@@ -131,28 +112,11 @@ class DataStreamHandler:
                 await self.cancel()
         except Exception as e:
             log.error(e)
+            log.debug("TRACEBACK", exc_info=True)
             if not getattr(self, "_is_canceling", False):
                 await self.cancel()
 
-
-
-    async def init_frame_builder(self):
-        try:
-            meta_data = await self._stream_source.get_meta_data()
-        except RuntimeError as e:
-            log.error(e)
-            return
-        self._frame_builder = FrameBuilder(run_meta_data=meta_data, expand_factor=2, offset=(1, 1))
-
-    def metadata_to_proto(self, meta_data: dict) -> RunMetaData:
-        # If we add an empty dict to the steps key, we can convert the dict to a RunData object
-        # and just use the metadata part of the object
-        meta_data['steps'] = {}
-        run_data = RunData.from_dict(meta_data)
-        meta_proto = run_data.to_protobuf()
-        return meta_proto.run_meta_data
-
-    def split_request(self, req: Union[StepDataReq, PixelChangesReq]):
+    def split_request(self, req: Union[PixelChangesReq]):
         # Split the request into two requests, one for the last available step and one for the rest
         last_available_step = self.get_last_available_step()
         if req.start_step > last_available_step:
@@ -168,7 +132,7 @@ class DataStreamHandler:
     def get_last_available_step(self):
         return self._stream_source.last_available_step()
 
-    def is_valid_request(self, req: Union[StepDataReq, PixelChangesReq]):
+    def is_valid_request(self, req: Union[PixelChangesReq]):
         if req.start_step < 0:
             raise ValueError(f"Start step '{req.start_step}' should be greater than 0")
         if req.end_step < 0:
@@ -188,10 +152,10 @@ class DataStreamHandler:
         update.final_step = last_step
         self.add_msg_to_buffer(update, priority=True)
 
-    def request_out_of_bounds(self, req: Union[StepDataReq, PixelChangesReq, FullStepDataReq, FullPixelChangesReq]):
-        if isinstance(req, (FullStepDataReq, FullPixelChangesReq)):
+    def request_out_of_bounds(self, req: Union[PixelChangesReq, FullPixelChangesReq]):
+        if isinstance(req, FullPixelChangesReq):
             bound_step = req.step
-        elif isinstance(req, (StepDataReq, PixelChangesReq)):
+        elif isinstance(req, PixelChangesReq):
             bound_step = req.end_step
         else:
             raise ValueError(f"Unknown request type: {req}")
@@ -202,11 +166,15 @@ class DataStreamHandler:
         return False
 
     async def handle_full_pixel_changes_request(self, req: FullPixelChangesReq):
+        if not self._color_mapping:
+            run_meta_data = await self._stream_source.get_meta_data()
+            self._color_mapping = create_color_map(run_meta_data.snake_values)
         if self.request_out_of_bounds(req):
             self.add_waiting_request(req.step, req)
             return
-        full_step = self._stream_source.get_full_step(req.step)
-        full_state_change = self._frame_builder.full_step_to_pixel_data(full_step.to_dict(full_state=True))
+        full_step = self._stream_source.get_map(req.step)
+        diffs = get_diffs(None, full_step)
+        full_state_change = make_color_changes(diffs, self._color_mapping)
         msg = create_pixel_change_proto_msg(full_state_change, full_state=True)
         step_pixel_changes = StepPixelChanges()
         step_pixel_changes.changes.append(msg)
@@ -214,67 +182,50 @@ class DataStreamHandler:
         self.add_msg_to_buffer(step_pixel_changes)
 
     async def handle_pixel_changes_request(self, req: PixelChangesReq):
+        if not self._color_mapping:
+            run_meta_data = await self._stream_source.get_meta_data()
+            self._color_mapping = create_color_map(run_meta_data.snake_values)
         if self.request_out_of_bounds(req):
             req = self.split_request(req)
             if req is None:
                 return
-        steps = self._stream_source.get_step_range(start=req.start_step, end=req.end_step)
-        for step in steps:
-            changes = self._frame_builder.step_to_pixel_changes(step.to_dict())
+        self._stream_source.get_map(req.start_step)
+        step_maps = self._stream_source.get_map_range(start=req.start_step, end=req.end_step)
+        prev_map = None
+        for i, s_maps in enumerate(step_maps):
             step_pixel_changes = StepPixelChanges()
-            step_pixel_changes.step = step.step
-            for change in changes:
+            step_pixel_changes.step = req.start_step + i
+            for s_map in s_maps:
+                diffs = get_diffs(prev_map, s_map)
+                change = make_color_changes(diffs, self._color_mapping)
                 msg = create_pixel_change_proto_msg(change)
                 step_pixel_changes.changes.append(msg)
+                prev_map = s_map
             self.add_msg_to_buffer(step_pixel_changes)
-
-    async def handle_full_step_data_request(self, req: FullStepDataReq):
-        if self.request_out_of_bounds(req):
-            self.add_waiting_request(req.step, req)
-            return
-        full_step = self._stream_source.get_full_step(req.step)
-        full_step_proto = full_step.to_protobuf(full_state=True)
-        self.add_msg_to_buffer(full_step_proto)
-
-    async def handle_step_data_request(self, req: StepDataReq):
-        if self.request_out_of_bounds(req):
-            req = self.split_request(req)
-            if req is None:
-                return
-        steps = self._stream_source.get_step_range(start=req.start_step, end=req.end_step)
-        for step in steps:
-            step_proto = step.to_protobuf(full_state=False)
-            self.add_msg_to_buffer(step_proto)
 
     async def handle_run_meta_data_request(self):
         try:
             run_meta_data = await self._stream_source.get_meta_data()
         except RuntimeError as e:
+            log.debug("TRACEBACK", exc_info=True)
             log.error(e)
             return
-        run_meta_data['steps'] = {}
-        run_data = RunData.from_dict(run_meta_data)
-        run_data_proto = run_data.to_protobuf()
-        run_meta_data_proto = run_data_proto.run_meta_data
+        if not self._color_mapping:
+            self._color_mapping = create_color_map(run_meta_data.snake_values)
+        run_meta_data_proto = env_meta_data_to_proto(run_meta_data)
         self.add_msg_to_buffer(run_meta_data_proto)
 
     async def process_request(
         self,
         req: Union[
-            StepDataReq,
             PixelChangesReq,
             RunMetaDataRequest,
-            FullStepDataReq,
             FullPixelChangesReq
             ]
         ):
         try:
-            if isinstance(req, StepDataReq):
-                await self.handle_step_data_request(req)
-            elif isinstance(req, PixelChangesReq):
+            if isinstance(req, PixelChangesReq):
                 await self.handle_pixel_changes_request(req)
-            elif isinstance(req, FullStepDataReq):
-                await self.handle_full_step_data_request(req)
             elif isinstance(req, FullPixelChangesReq):
                 await self.handle_full_pixel_changes_request(req)
             elif isinstance(req, RunMetaDataRequest):
@@ -290,7 +241,7 @@ class DataStreamHandler:
             req_wrapper = Request()
             req_wrapper.ParseFromString(req)
             req_obj = unwrap_request(req_wrapper)
-            if isinstance(req_obj, (StepDataReq, PixelChangesReq)):
+            if isinstance(req_obj, PixelChangesReq):
                 try:
                     self.is_valid_request(req_obj)
                 except Exception as e:

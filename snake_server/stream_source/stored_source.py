@@ -14,7 +14,7 @@ class StoredSource(IStreamSource):
         steps = [self._run_data.steps[i] for i in range(start, end + 1)]
         return steps
 
-    def get_full_step(self, step_nr: int) -> StepData:
+    def get_step(self, step_nr: int) -> StepData:
         full_state = self._run_data.get_state_dict(step_nr)
         step_data = StepData(full_state['food'], step_nr)
         for snake in full_state['snakes']:

@@ -1,0 +1,15 @@
+[tools]
+python = "3.14"
+
+[env]
+_.python.venv = {path = ".venv", create = true, uv_create_args = ["--seed"]}
+
+[tasks.setup]
+run = """
+pip install -e .
+"""
+
+[tasks.setup_clean]
+run = """
+pip install -e . --force-reinstall
+"""

@@ -1,25 +1,30 @@
+import numpy as np
 from abc import ABC, abstractmethod
 from typing import List
-from snake_sim.run_data.run_data import RunData, StepData
+from snake_sim.environment.types import CompleteStepState, EnvMetaData
 
 
 class IStreamSource(ABC):
     """Interface for stream source classes"""
 
     @abstractmethod
-    def get_step_range(self, start: int, end: int) -> List[StepData]:
+    def get_step_range(self, start: int, end: int) -> List[CompleteStepState]:
         pass
 
     @abstractmethod
-    def get_full_step(self, step: int) -> StepData:
+    def get_step(self, step: int) -> CompleteStepState:
         pass
 
     @abstractmethod
-    def get_run_data(self) -> RunData:
+    def get_map(self, step: int) -> np.ndarray:
         pass
 
     @abstractmethod
-    async def get_meta_data(self) -> dict:
+    def get_map_range(self, start: int, end: int) -> List[List[np.ndarray]]:
+        pass
+
+    @abstractmethod
+    async def get_meta_data(self) -> EnvMetaData:
         pass
 
     @abstractmethod

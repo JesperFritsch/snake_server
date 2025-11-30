@@ -7,7 +7,7 @@ from multiprocessing import Pipe, Process
 from collections import deque
 
 from snake_sim.render.pygame_render import play_stream
-from snake_sim.protobuf.sim_msgs_pb2 import (
+from snake_proto_template.python.sim_msgs_pb2 import (
     MsgWrapper,
     PixelChanges,
     RunData as proto_run_data,
@@ -22,7 +22,6 @@ from snake_sim.protobuf.sim_msgs_pb2 import (
     RunUpdate,
     BadRequest
 )
-from snake_sim.run_data.run_data import StepData, RunData
 from google.protobuf.json_format import MessageToDict
 
 log = logging.getLogger(__name__)
