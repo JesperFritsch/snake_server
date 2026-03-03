@@ -13,7 +13,7 @@ def get_diffs(old: np.ndarray, new: np.ndarray) -> List[Tuple[int, int, int]]:
     changed_positions = np.argwhere(old != new)
     for pos in changed_positions:
         y, x = pos
-        diffs.append((x, y, int(new[x, y])))
+        diffs.append((x, y, int(new[y, x])))
     return diffs
 
 
